@@ -1,14 +1,26 @@
-# TrollStore TV
+<p align="center">
+  <img src="docs/assets/trollstore-tv-banner.png" width="100%" alt="TrollStore TV — Apple TV 4K (tvOS 17.0) CoreTrust 永久签名安装器" />
+</p>
 
-[![CI](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml)
-![Platform](https://img.shields.io/badge/platform-tvOS%2017.0%20(21J354)-blue)
-![License](https://img.shields.io/badge/license-MIT%20%2F%20BSD--4--Clause-green)
+<h1 align="center">TrollStore TV</h1>
 
-[English](README.md) | **简体中文**
+<p align="center">
+  <a href="https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml"><img src="https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/platform-tvOS%2017.0%20(21J354)-blue" alt="Platform" />
+  <img src="https://img.shields.io/badge/license-MIT%20%2F%20BSD--4--Clause-green" alt="License" />
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <strong>简体中文</strong> · <a href="#从源码构建macos">源码构建</a> · <a href="#首次部署到-apple-tvtvos-170-临时越狱-ssh">安装说明</a> · <a href="ROADMAP.md">路线图</a>
+</p>
 
 面向 **Apple TV 4K（`AppleTV14,1` / tvOS 17.0 `21J354`）** 的可编译、已通过冷重启存活实测的 **TrollStore 免越狱移植版**，基于 [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS)（`f1ebe52`）与 [`opa334/TrollStore`](https://github.com/opa334/TrollStore) 深度适配现代 Xcode tvOS SDK。
 
 借助 CoreTrust 签名链（`TeamIdentifier=T8ALTGMVXN`），通过本工具安装的应用**冷重启后可在未越狱态直接打开**，无需依赖越狱 `trustcache` 或外部 `ldid`。
+
+<p align="center">
+  <img src="docs/assets/architecture-overview.svg" width="100%" alt="TrollStore TV 架构与冷重启签名链路图" />
+</p>
 
 > 如需配套宿主机工具集（开源 `.deb` 转 `.ipa`（如 Kodi）、YouTube/通用 BYOIPA 自助打包与 tvOS 图标反色、批量 CoreTrust 签名、干净室探针与重启验收脚本），请见配套仓库 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** 及 [中文应用打包指南](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.zh-CN.md)。
 

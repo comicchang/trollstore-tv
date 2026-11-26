@@ -1,14 +1,26 @@
-# TrollStore TV
+<p align="center">
+  <img src="docs/assets/trollstore-tv-banner.png" width="100%" alt="TrollStore TV — CoreTrust Permasigned Installer for Apple TV 4K (tvOS 17.0)" />
+</p>
 
-[![CI](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml)
-![Platform](https://img.shields.io/badge/platform-tvOS%2017.0%20(21J354)-blue)
-![License](https://img.shields.io/badge/license-MIT%20%2F%20BSD--4--Clause-green)
+<h1 align="center">TrollStore TV</h1>
 
-**English** | [简体中文](README.zh-CN.md)
+<p align="center">
+  <a href="https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml"><img src="https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <img src="https://img.shields.io/badge/platform-tvOS%2017.0%20(21J354)-blue" alt="Platform" />
+  <img src="https://img.shields.io/badge/license-MIT%20%2F%20BSD--4--Clause-green" alt="License" />
+</p>
+
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="#building-from-source-macos">Quickstart</a> · <a href="#first-time-installation-via-jailbroken-tvos-170-ssh">Install</a> · <a href="ROADMAP.md">Roadmap</a>
+</p>
 
 A buildable, cold-reboot-verified **TrollStore** port for **Apple TV 4K (`AppleTV14,1`, tvOS 17.0 / `21J354`)**, based on [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) (`f1ebe52`) and [`opa334/TrollStore`](https://github.com/opa334/TrollStore).
 
 TrollStore TV uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed tvOS IPAs that **survive cold reboots and launch directly in the unjailbroken state** — without relying on jailbreak trustcaches or external `ldid`.
+
+<p align="center">
+  <img src="docs/assets/architecture-overview.svg" width="100%" alt="TrollStore TV Architecture &amp; Cold-Reboot Signing Pipeline" />
+</p>
 
 > Looking for companion host-side utilities (`.deb`-to-`.ipa` conversion for open-source apps like Kodi, YouTube/generic BYOIPA packaging & tvOS icon inversion, batch CoreTrust signing, clean-room probe sources, and post-reboot verification)? See **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** ([App Packaging Guide](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)).
 
