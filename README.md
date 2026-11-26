@@ -10,7 +10,17 @@ A buildable, cold-reboot-verified **TrollStore** port for **Apple TV 4K (`AppleT
 
 TrollStore TV uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed tvOS IPAs that **survive cold reboots and launch directly in the unjailbroken state** — without relying on jailbreak trustcaches or external `ldid`.
 
-> Looking for companion host-side utilities (`.deb`-to-`.ipa` conversion for open-source apps like Kodi, generic BYOIPA repackaging & tvOS icon inversion, batch CoreTrust signing, clean-room probe sources, and post-reboot verification)? See the companion repository **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** (and its [App Packaging Guide](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)).
+> Looking for companion host-side utilities (`.deb`-to-`.ipa` conversion for open-source apps like Kodi, YouTube/generic BYOIPA packaging & tvOS icon inversion, batch CoreTrust signing, clean-room probe sources, and post-reboot verification)? See **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** ([App Packaging Guide](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)).
+
+---
+
+## Which Repo Should I Choose?
+
+| Repository | Mechanism | Target tvOS | Cold-Reboot Unjailbroken Survival | License |
+| --- | --- | --- | --- | --- |
+| **`trollstore-tv`** *(this repo)* | CoreTrust bypass (`T8ALTGMVXN`) + built-in ChOma | **tvOS 17.0 (`21J354`)** | **Yes** (apps launch directly after cold reboot) | MIT + BSD-4-Clause (`uicache.m`) |
+| [`trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv) | Ad-hoc `ldid` + kernel trustcache (`jbctl`) | **Any jailbroken tvOS 17.x+** | Requires re-jailbreak after reboot (includes TV UI, `:8787` web store & local userscript host) | Pure MIT (clean-room) |
+| [`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools) | Host-side packaging, BYOIPA, icon inversion, batch signing & verification scripts | macOS / Linux → tvOS 17.0 | Companion toolkit for `trollstore-tv` | Pure MIT |
 
 ---
 
@@ -83,11 +93,19 @@ Outputs in `_build/`:
 - `_build/TrollStore-tvOS.tar` — install archive for `trollstorehelper install-trollstore`
 - `_build/TrollStore-tvOS.ipa` — standard `Payload/TrollStore.app` bundle
 
+### Script Reference
+
+| Script | Purpose & Options |
+| --- | --- |
+| [`scripts/build-libcrypto-tvos.sh`](scripts/build-libcrypto-tvos.sh) | Cross-compile static OpenSSL `libcrypto.a` for tvOS arm64 into gitignored `ChOma/external/tvos/`. Env: `OPENSSL_VERSION` (default `3.5.1`), `DEPLOY` (default `14.0`), `SDK_DIR`, `WORK`. Run `--help` for details. |
+| [`scripts/build-tvos.sh`](scripts/build-tvos.sh) | Build `fastPathSign`, `trollstorehelper`, `TrollStore.app`, verify zero `dynamic_lookup` symbols & `T8ALTGMVXN` signature, and assemble `_build/TrollStore-tvOS.{tar,ipa}`. Flags: `--dry-run`, `--clean`. Env: `THEOS`, `DEVELOPER_DIR`. |
+| [`tests/run.sh`](tests/run.sh) | Local & CI verification gate (`sh -n`, `shellcheck`, plist lint, `--dry-run` smoke, tvOS regression guards, privacy/artifact hygiene, Markdown links). |
+
 ---
 
 ## First-Time Installation (via Jailbroken tvOS 17.0 SSH)
 
-On an Apple TV 4K running tvOS 17.0 with temporary root SSH access:
+On an Apple TV 4K running tvOS 17.0 with temporary root SSH access (e.g. [Relaxin](https://github.com/owngoal-dev/Relaxin)):
 
 ```sh
 # 1. Copy trollstorehelper and TrollStore-tvOS.tar to the real rootfs /private/var/tmp
@@ -105,6 +123,32 @@ sudo rm -f /var/tmp/trollstorehelper /var/tmp/TrollStore-tvOS.tar \
 ```
 
 Once installed, `TrollStore.app` and apps installed through it remain launchable after a full cold reboot in the unjailbroken state.
+
+---
+
+## Installing & Managing Apps (`trollstorehelper`)
+
+Locate the installed `TrollStore.app` helper path once (on RootHide SSH, real `/private/var/containers/...` is mounted at `/rootfs/private/var/containers/...`):
+
+```sh
+TSH=$(ls /rootfs/private/var/containers/Bundle/Application/*/TrollStore.app/trollstorehelper)
+
+# Install an unsigned / standard ad-hoc tvOS .ipa (copy to /rootfs/private/var/tmp first on RootHide)
+sudo cp /var/tmp/MyApp.ipa /rootfs/private/var/tmp/MyApp.ipa
+sudo "$TSH" install /private/var/tmp/MyApp.ipa
+sudo rm -f /var/tmp/MyApp.ipa /rootfs/private/var/tmp/MyApp.ipa
+
+# Uninstall an installed app by Bundle ID
+sudo "$TSH" uninstall com.example.myapp
+
+# Refresh LaunchServices / icon registrations for all TrollStore apps
+sudo "$TSH" refresh-all
+
+# Upgrade TrollStore.app itself from a newly built TrollStore-tvOS.tar
+sudo "$TSH" install-trollstore /private/var/tmp/TrollStore-tvOS.tar
+```
+
+> **Preparing IPAs**: Need to convert an open-source `.deb` (e.g. Kodi) into an `.ipa`, repackage a local BYOIPA app with clean sandbox entitlements, or invert tvOS `Assets.car` icons? Use **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** (`scripts/deb2ipa.sh`, `scripts/repack-ipa.sh`, `scripts/build-youtube-tvos.sh`).
 
 ---
 

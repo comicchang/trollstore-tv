@@ -10,7 +10,17 @@
 
 借助 CoreTrust 签名链（`TeamIdentifier=T8ALTGMVXN`），通过本工具安装的应用**冷重启后可在未越狱态直接打开**，无需依赖越狱 `trustcache` 或外部 `ldid`。
 
-> 如需配套宿主机工具集（开源 `.deb` 转 `.ipa`（如 Kodi）、通用 BYOIPA 自助重打包与 tvOS 图标反色、批量 CoreTrust 签名、干净室探针与重启验收脚本），请见配套仓库 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** 及 [应用打包与安装指南](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)。
+> 如需配套宿主机工具集（开源 `.deb` 转 `.ipa`（如 Kodi）、YouTube/通用 BYOIPA 自助打包与 tvOS 图标反色、批量 CoreTrust 签名、干净室探针与重启验收脚本），请见配套仓库 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** 及 [中文应用打包指南](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.zh-CN.md)。
+
+---
+
+## 如何选择仓库？
+
+| 仓库 | 底层机制 | 适用系统 | 冷重启未越狱存活 | 许可证 |
+| --- | --- | --- | --- | --- |
+| **`trollstore-tv`** *（本仓库）* | CoreTrust 签名链（`T8ALTGMVXN`）+ 内置 ChOma | **仅限 tvOS 17.0（`21J354`）** | **支持**（冷重启后未越狱直接运行） | MIT + BSD-4-Clause（`uicache.m`） |
+| [`trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv) | `ldid` + 内核信任缓存（`jbctl`） | **任意已越狱 tvOS 17.x+** | 需重启后重新越狱（自带电视界面、`:8787` 网页商店与本地离线油猴托管） | 纯 MIT（洁净室原创） |
+| [`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools) | 宿主机打包、BYOIPA、图标反色、批量签名与验收脚本 | macOS / Linux → tvOS 17.0 | `trollstore-tv` 配套工具箱 | 纯 MIT |
 
 ---
 
@@ -82,9 +92,19 @@
 - `_build/TrollStore-tvOS.tar`（供 `trollstorehelper install-trollstore` 安装）
 - `_build/TrollStore-tvOS.ipa`（标准 `Payload/TrollStore.app` 压缩包）
 
+### 脚本参数说明
+
+| 脚本 | 用途与常用参数 |
+| --- | --- |
+| [`scripts/build-libcrypto-tvos.sh`](scripts/build-libcrypto-tvos.sh) | 交叉编译 tvOS arm64 静态 OpenSSL `libcrypto.a` 到已 gitignore 的 `ChOma/external/tvos/`。环境变量：`OPENSSL_VERSION`（默认 `3.5.1`）、`DEPLOY`（默认 `14.0`）、`SDK_DIR`、`WORK`。支持 `--help`。 |
+| [`scripts/build-tvos.sh`](scripts/build-tvos.sh) | 一键编译 `fastPathSign`、`trollstorehelper`、`TrollStore.app`，校验零 `dynamic_lookup` 符号与 `T8ALTGMVXN` 签名，打包 `_build/TrollStore-tvOS.{tar,ipa}`。参数：`--dry-run`、`--clean`；环境变量：`THEOS`、`DEVELOPER_DIR`。 |
+| [`tests/run.sh`](tests/run.sh) | 本地与 CI 自动化门禁（`sh -n`、`shellcheck`、plist 校验、`--dry-run`、tvOS 防回归断言、隐私/产物检查、Markdown 断链检查）。 |
+
 ---
 
 ## 首次部署到 Apple TV（tvOS 17.0 临时越狱 SSH）
+
+前置：Apple TV 4K 运行 tvOS 17.0，并可通过临时越狱（如 [Relaxin](https://github.com/owngoal-dev/Relaxin)）进入 root SSH：
 
 ```sh
 # 1. 上传 trollstorehelper 与 TrollStore-tvOS.tar
@@ -102,6 +122,32 @@ sudo rm -f /var/tmp/trollstorehelper /var/tmp/TrollStore-tvOS.tar \
 ```
 
 安装完成后，冷重启回到未越狱态即可直接打开 `TrollStore` 与通过其安装的各类 tvOS 应用。
+
+---
+
+## 日常使用：安装、卸载与刷新应用（`trollstorehelper`）
+
+在 Apple TV SSH 中先定位已安装的 `trollstorehelper`（RootHide 环境下真实 `/private/var/containers/...` 位于 `/rootfs/private/var/containers/...`）：
+
+```sh
+TSH=$(ls /rootfs/private/var/containers/Bundle/Application/*/TrollStore.app/trollstorehelper)
+
+# 安装未签名或普通 ad-hoc 签名的 tvOS .ipa（RootHide 下先拷贝到 /rootfs/private/var/tmp）
+sudo cp /var/tmp/MyApp.ipa /rootfs/private/var/tmp/MyApp.ipa
+sudo "$TSH" install /private/var/tmp/MyApp.ipa
+sudo rm -f /var/tmp/MyApp.ipa /rootfs/private/var/tmp/MyApp.ipa
+
+# 按 Bundle ID 卸载应用
+sudo "$TSH" uninstall com.example.myapp
+
+# 刷新全部 TrollStore 应用的桌面图标与 LaunchServices 注册
+sudo "$TSH" refresh-all
+
+# 用新编译的 TrollStore-tvOS.tar 就地升级 TrollStore 本体
+sudo "$TSH" install-trollstore /private/var/tmp/TrollStore-tvOS.tar
+```
+
+> **准备 IPA**：需要将开源 `.deb`（如 Kodi）转 `.ipa`、按 BYOIPA 流程打包 YouTube / 通用应用或对 tvOS 图标反色？请配套使用 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)**（`scripts/deb2ipa.sh`、`scripts/repack-ipa.sh`、`scripts/build-youtube-tvos.sh`）。
 
 ---
 

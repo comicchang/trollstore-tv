@@ -11,6 +11,27 @@ SDK_DIR=${SDK_DIR:-/Applications/Xcode.app/Contents/Developer/Platforms/AppleTVO
 SDK_NAME=${SDK_NAME:-$(basename "$SDK_DIR"/SDKs/AppleTVOS*.sdk 2>/dev/null | head -1)}
 DEPLOY=${DEPLOY:-14.0}
 
+usage() {
+	cat <<'USAGE'
+Usage: build-libcrypto-tvos.sh [-h|--help]
+
+Cross-compile static OpenSSL libcrypto.a for tvOS arm64 into gitignored
+ChOma/external/tvos/libcrypto.a and ChOma/external/tvos-include/openssl/.
+
+Environment:
+  OPENSSL_VERSION  OpenSSL version to download & build (default: 3.5.1)
+  SDK_DIR          AppleTVOS platform Developer dir
+  DEPLOY           Minimum tvOS deployment target (default: 14.0)
+  WORK             Temporary build directory
+USAGE
+}
+
+case "${1:-}" in
+	-h|--help) usage; exit 0 ;;
+	"") ;;
+	*) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
+esac
+
 [ -d "$SDK_DIR/SDKs/$SDK_NAME" ] || { echo "tvOS SDK not found under $SDK_DIR/SDKs" >&2; exit 2; }
 
 mkdir -p "$WORK"
