@@ -5,6 +5,7 @@
 #import <sys/stat.h>
 #import <dlfcn.h>
 #import <spawn.h>
+#import <TSSpawnCompat.h>
 #import <objc/runtime.h>
 #import <TSUtil.h>
 #import <sys/utsname.h>
@@ -12,6 +13,7 @@
 #import <mach-o/fat.h>
 #import "devmode.h"
 #import "jit.h"
+#import "TSPrivateRefs.h"
 #ifndef EMBEDDED_ROOT_HELPER
 #import "codesign.h"
 #import "coretrust_bug.h"
@@ -41,7 +43,6 @@ extern mach_msg_return_t SBReloadIconForIdentifier(mach_port_t machport, const c
 extern NSString* BKSActivateForEventOptionTypeBackgroundContentFetching;
 extern NSString* BKSOpenApplicationOptionKeyActivateForEvent;
 
-extern void BKSTerminateApplicationForReasonAndReportWithDescription(NSString *bundleID, int reasonID, bool report, NSString *description);
 
 #define kCFPreferencesNoContainer CFSTR("kCFPreferencesNoContainer")
 
@@ -505,48 +506,82 @@ int signApp(NSString* appPath)
 #else
 int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 {
-	//if (@available(iOS 16, *)) {
-	//	return codesign_sign_adhoc(filePath.fileSystemRepresentation, true, entitlements);
-	//}
-	// If iOS 14 is so great, how come there is no iOS 14 2?????
-	//else {
-		if(!isLdidInstalled()) return 173;
-
-		NSString *entitlementsPath = nil;
-		NSString *signArg = @"-s";
-		NSString* errorOutput;
-		if(entitlements)
+#if TARGET_OS_TV
+	// tvOS 没有可用的 ldid（越狱 ldid 依赖 root-hiding 动态库链），
+	// 直接使用 ChOma 的 ad-hoc 签名实现，与宿主机 fastPathSign 保持一致。
+	BOOL isDir = NO;
+	[[NSFileManager defaultManager] fileExistsAtPath:filePath isDirectory:&isDir];
+	if(!isDir)
+	{
+		// preserveMetadata=true keeps the previous identifier/requirements and, when
+		// entitlements is nil, also keeps the previous entitlements blob. A binary
+		// signed by an App-Store-style packager then cannot be re-signed on device
+		// (errSecCSInternalError), so the nil pass must start from a clean signature.
+		BOOL preserveMetadata = (entitlements != nil);
+		int r = codesign_sign_adhoc(filePath.fileSystemRepresentation, preserveMetadata, entitlements);
+		if(r != 0 && !preserveMetadata)
 		{
-			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlements format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
-			if (entitlementsXML) {
-				entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
-				[entitlementsXML writeToFile:entitlementsPath atomically:NO];
-				signArg = [@"-S" stringByAppendingString:entitlementsPath];
+			// Some binaries carry a CoreTrust-bypassed signature the Security framework
+			// refuses to replace from scratch; preserving metadata at least normalizes them.
+			r = codesign_sign_adhoc(filePath.fileSystemRepresentation, true, entitlements);
+		}
+		if(r != 0) NSLog(@"[signAdhoc] failed (%d) for %@ (entitlements:%@)", r, filePath, entitlements ? @"yes" : @"no");
+		return r;
+	}
+
+	int ret = 0;
+	NSArray<NSURLResourceKey>* keys = @[NSURLIsRegularFileKey, NSURLIsSymbolicLinkKey];
+	NSDirectoryEnumerator* enumerator = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:filePath] includingPropertiesForKeys:keys options:0 errorHandler:nil];
+	for(NSURL* fileURL in enumerator)
+	{
+		// Only regular files: a directory or symlink passed to codesign_sign_adhoc
+		// would either fail or read through the link and corrupt unrelated content.
+		NSNumber* isRegularFile;
+		NSNumber* isSymlink;
+		if(![fileURL getResourceValue:&isRegularFile forKey:NSURLIsRegularFileKey error:nil]) continue;
+		if(![fileURL getResourceValue:&isSymlink forKey:NSURLIsSymbolicLinkKey error:nil]) continue;
+		if(!isRegularFile.boolValue || isSymlink.boolValue) continue;
+
+		NSString* path = fileURL.path;
+
+		FAT* fat = fat_init_from_path(path.fileSystemRepresentation);
+		if(fat)
+		{
+			fat_free(fat);
+			int r = codesign_sign_adhoc(path.fileSystemRepresentation, false, nil);
+			if(r != 0) r = codesign_sign_adhoc(path.fileSystemRepresentation, true, nil);
+			if(r != 0)
+			{
+				NSLog(@"[signAdhoc] failed (%d) for %@ (entitlements:no, recursive)", r, path);
+				ret = r;
 			}
-			
 		}
-		int ldidRet = runLdid(@[signArg, filePath], nil, &errorOutput);
-		if (entitlementsPath) {
-			[[NSFileManager defaultManager] removeItemAtPath:entitlementsPath error:nil];
+	}
+	return ret;
+#else
+	if(!isLdidInstalled()) return 173;
+	NSString *entitlementsPath = nil;
+	NSString *signArg = @"-s";
+	NSString* errorOutput;
+	if(entitlements)
+	{
+		NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlements format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+		if (entitlementsXML) {
+			entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
+			[entitlementsXML writeToFile:entitlementsPath atomically:NO];
+			signArg = [@"-S" stringByAppendingString:entitlementsPath];
 		}
-
-		NSLog(@"ldid exited with status %d", ldidRet);
-
-		NSLog(@"- ldid error output start -");
-
-		printMultilineNSString(errorOutput);
-
-		NSLog(@"- ldid error output end -");
-
-		if(ldidRet == 0)
-		{
-			return 0;
-		}
-		else
-		{
-			return 175;
-		}
-	//}
+	}
+	int ldidRet = runLdid(@[signArg, filePath], nil, &errorOutput);
+	if (entitlementsPath) {
+		[[NSFileManager defaultManager] removeItemAtPath:entitlementsPath error:nil];
+	}
+	NSLog(@"ldid exited with status %d", ldidRet);
+	NSLog(@"- ldid error output start -");
+	printMultilineNSString(errorOutput);
+	NSLog(@"- ldid error output end -");
+	return ldidRet == 0 ? 0 : 175;
+#endif
 }
 
 int signApp(NSString* appPath)
@@ -601,6 +636,10 @@ int signApp(NSString* appPath)
 	// As a result, we cannot bail on the entire app if an additional binary is encrypted (e.g. app extensions)
 	// Instead, we will display a warning to the user, and warn them that the app may not work properly
 	BOOL hasAdditionalEncryptedBinaries = NO;
+
+	// Entitlements are collected before any signing pass: re-signing normalizes the
+	// Mach-O first, so the original entitlements must be read while they are intact.
+	NSMutableArray<NSDictionary*>* bundleSignRequests = [NSMutableArray new];
 
 	NSURL* fileURL;
 	NSDirectoryEnumerator *enumerator;
@@ -702,16 +741,26 @@ int signApp(NSString* appPath)
 			entitlementsToUse[@"jb.pmap_cs_custom_trust"] = @"PMAP_CS_APP_STORE";
 #endif
 
-			int r = signAdhoc(bundleMainExecutablePath, entitlementsToUse);
-			if (r != 0) return r;
+			[bundleSignRequests addObject:@{
+				@"path" : bundleMainExecutablePath,
+				@"entitlements" : entitlementsToUse
+			}];
 		}
 	}
 
-	// All entitlement related issues should be fixed at this point, so all we need to do is sign the entire bundle
-	// And then apply the CoreTrust bypass to all executables
-	// XXX: This only works because we're using ldid at the moment and that recursively signs everything
+	// Normalize every Mach-O in the bundle with a plain ad-hoc signature first. Packaging
+	// tools may leave App-Store-style signatures that the device Security framework refuses
+	// to re-sign (errSecCSSignatureFailed / errSecCSInternalError); this pass gives every
+	// binary a signable ad-hoc signature before the entitlement pass overwrites the bundle
+	// main executables (which is where nested .appex entitlements are applied).
 	int r = signAdhoc(appPath, nil);
 	if (r != 0) return r;
+
+	for(NSDictionary* request in bundleSignRequests)
+	{
+		r = signAdhoc(request[@"path"], request[@"entitlements"]);
+		if (r != 0) return r;
+	}
 
 #ifndef TROLLSTORE_LITE
 	// Apply CoreTrust bypass
@@ -912,7 +961,7 @@ int installApp(NSString* appPackagePath, BOOL sign, BOOL force, BOOL isTSUpdate,
 		};
 	}
 
-	MCMAppContainer* appContainer = [MCMAppContainer containerWithIdentifier:appId createIfNecessary:NO existed:nil error:nil];
+	MCMAppContainer* appContainer = (MCMAppContainer*)[TSClass(@"MCMAppContainer") containerWithIdentifier:appId createIfNecessary:NO existed:nil error:nil];
 	if(appContainer)
 	{
 		// App update
@@ -940,7 +989,7 @@ int installApp(NSString* appPackagePath, BOOL sign, BOOL force, BOOL isTSUpdate,
 		// Terminate app if it's still running
 		if(!isTSUpdate)
 		{
-			BKSTerminateApplicationForReasonAndReportWithDescription(appId, 5, false, @"TrollStore - App updated");
+			TSBksTerminate(appId, 5, false, @"TrollStore - App updated");
 		}
 
 		NSLog(@"[installApp] replacing existing app with new version");
@@ -1013,7 +1062,7 @@ int installApp(NSString* appPackagePath, BOOL sign, BOOL force, BOOL isTSUpdate,
 			NSLog(@"[installApp] doing custom installation using MCMAppContainer");
 
 			NSError* mcmError;
-			appContainer = [MCMAppContainer containerWithIdentifier:appId createIfNecessary:YES existed:nil error:&mcmError];
+			appContainer = (MCMAppContainer*)[TSClass(@"MCMAppContainer") containerWithIdentifier:appId createIfNecessary:YES existed:nil error:&mcmError];
 
 			if(!appContainer || mcmError)
 			{
@@ -1038,7 +1087,7 @@ int installApp(NSString* appPackagePath, BOOL sign, BOOL force, BOOL isTSUpdate,
 		}
 	}
 
-	appContainer = [MCMAppContainer containerWithIdentifier:appId createIfNecessary:NO existed:nil error:nil];
+	appContainer = (MCMAppContainer*)[TSClass(@"MCMAppContainer") containerWithIdentifier:appId createIfNecessary:NO existed:nil error:nil];
 
 	// Mark app as TrollStore app
 	NSURL* trollStoreMarkURL = [appContainer.url URLByAppendingPathComponent:TS_ACTIVE_MARKER];
@@ -1198,7 +1247,13 @@ int installIpa(NSString* ipaPath, BOOL force, BOOL useInstalldMethod, BOOL skipU
 {
 	cleanRestrictions();
 
-	if(![[NSFileManager defaultManager] fileExistsAtPath:ipaPath]) return 166;
+	if(![[NSFileManager defaultManager] fileExistsAtPath:ipaPath])
+	{
+		struct stat ipaStat;
+		int statRet = stat(ipaPath.fileSystemRepresentation, &ipaStat);
+		NSLog(@"[installIpa] inaccessible: %@ (stat=%d errno=%d)", ipaPath, statRet, errno);
+		return 166;
+	}
 
 	BOOL suc = NO;
 	NSString* tmpPackagePath = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString];
@@ -1245,8 +1300,14 @@ int installTrollStore(NSString* pathToTar)
 {
 	_CFPreferencesSetValueWithContainerType _CFPreferencesSetValueWithContainer = (_CFPreferencesSetValueWithContainerType)dlsym(RTLD_DEFAULT, "_CFPreferencesSetValueWithContainer");
 	_CFPreferencesSynchronizeWithContainerType _CFPreferencesSynchronizeWithContainer = (_CFPreferencesSynchronizeWithContainerType)dlsym(RTLD_DEFAULT, "_CFPreferencesSynchronizeWithContainer");
-	_CFPreferencesSetValueWithContainer(CFSTR("SBShowNonDefaultSystemApps"), kCFBooleanTrue, CFSTR("com.apple.springboard"), CFSTR("mobile"), kCFPreferencesAnyHost, kCFPreferencesNoContainer);
-	_CFPreferencesSynchronizeWithContainer(CFSTR("com.apple.springboard"), CFSTR("mobile"), kCFPreferencesAnyHost, kCFPreferencesNoContainer);
+	if(_CFPreferencesSetValueWithContainer)
+	{
+		_CFPreferencesSetValueWithContainer(CFSTR("SBShowNonDefaultSystemApps"), kCFBooleanTrue, CFSTR("com.apple.springboard"), CFSTR("mobile"), kCFPreferencesAnyHost, kCFPreferencesNoContainer);
+	}
+	if(_CFPreferencesSynchronizeWithContainer)
+	{
+		_CFPreferencesSynchronizeWithContainer(CFSTR("com.apple.springboard"), CFSTR("mobile"), kCFPreferencesAnyHost, kCFPreferencesNoContainer);
+	}
 
 	if(![[NSFileManager defaultManager] fileExistsAtPath:pathToTar]) return 1;
 	if(![pathToTar.pathExtension isEqualToString:@"tar"]) return 1;
@@ -1267,6 +1328,7 @@ int installTrollStore(NSString* pathToTar)
 	if(![[NSFileManager defaultManager] fileExistsAtPath:tmpTrollStorePath]) return 1;
 
 	//if (@available(iOS 16, *)) {} else {
+		#if !TARGET_OS_TV
 		// Transfer existing ldid installation if it exists
 		// But only if the to-be-installed version of TrollStore is 1.5.0 or above
 		// This is to make it possible to downgrade to older versions still
@@ -1300,6 +1362,7 @@ int installTrollStore(NSString* pathToTar)
 			}
 		}
 	//}
+#endif
 
 	// Merge existing URL scheme settings value
 	if(!getTSURLSchemeState(nil))
@@ -1415,7 +1478,7 @@ void installPersistenceHelper(NSString* systemAppId, NSString *persistenceHelper
 		return;
 	}
 
-	BKSTerminateApplicationForReasonAndReportWithDescription(systemAppId, 5, false, @"TrollStore - Reload persistence helper");
+	TSBksTerminate(systemAppId, 5, false, @"TrollStore - Reload persistence helper");
 }
 
 void unregisterUserPersistenceHelper()
@@ -1447,7 +1510,7 @@ void uninstallPersistenceHelper(void)
 
 		[[NSFileManager defaultManager] moveItemAtPath:backupPath toPath:executablePath error:nil];
 
-		BKSTerminateApplicationForReasonAndReportWithDescription(systemAppProxy.bundleIdentifier, 5, false, @"TrollStore - Reload persistence helper");
+		TSBksTerminate(systemAppProxy.bundleIdentifier, 5, false, @"TrollStore - Reload persistence helper");
 	}
 
 	LSApplicationProxy* userAppProxy = findPersistenceHelperApp(PERSISTENCE_HELPER_TYPE_USER);
@@ -1526,6 +1589,9 @@ void cleanRestrictions(void)
 int MAIN_NAME(int argc, char *argv[], char *envp[])
 {
 	@autoreleasepool {
+#if TARGET_OS_TV
+		ts_loadTVPrivateFrameworks();
+#endif
 		if(argc <= 1) return -1;
 
 		if(getuid() != 0)
@@ -1595,7 +1661,7 @@ int MAIN_NAME(int argc, char *argv[], char *envp[])
 		}
 		else if([cmd isEqualToString:@"reboot"])
 		{
-			[[FBSSystemService sharedService] reboot];
+			[[TSClass(@"FBSSystemService") sharedService] reboot];
 			// Give the system some time to reboot
 			sleep(1);
 		}

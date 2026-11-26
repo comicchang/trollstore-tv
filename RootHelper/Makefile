@@ -17,17 +17,25 @@ $(HELPER_NAME)_FILES = $(wildcard *.m) $(wildcard ../Shared/*.m) $(wildcard ../C
 ifndef TROLLSTORE_LITE
 $(HELPER_NAME)_FILES += ../Exploits/fastPathSign/src/coretrust_bug.c ../Exploits/fastPathSign/src/codesign.m
 $(HELPER_NAME)_CODESIGN_FLAGS = --entitlements entitlements.plist
+ifeq ($(THEOS_TARGET_NAME),appletv)
+$(HELPER_NAME)_LDFLAGS = -L../ChOma/external/tvos -lcrypto
+else
 $(HELPER_NAME)_LDFLAGS = -L../ChOma/external/ios -lcrypto
+endif
 else
 $(HELPER_NAME)_CODESIGN_FLAGS = -Sentitlements.plist
 endif
  
-$(HELPER_NAME)_CFLAGS = -fobjc-arc -I../Shared $(shell pkg-config --cflags libcrypto) -I../ChOma/src -I../Exploits/fastPathSign/src -I$(shell brew --prefix)/opt/libarchive/include
+ifeq ($(THEOS_TARGET_NAME),appletv)
+# tvOS 无 Preferences 私有框架；helper 为 CLI，不需要设置页 UI
+$(HELPER_NAME)_FILES := $(filter-out ../Shared/TSListControllerShared.m,$($(HELPER_NAME)_FILES))
+endif
+
+$(HELPER_NAME)_CFLAGS = -fobjc-arc -I../Shared -I../ChOma/external/tvos-include -I../ChOma/src -I../Exploits/fastPathSign/src -I$(shell brew --prefix)/opt/libarchive/include
 
 $(HELPER_NAME)_INSTALL_PATH = /usr/local/bin
 $(HELPER_NAME)_LIBRARIES = archive
-$(HELPER_NAME)_FRAMEWORKS = CoreTelephony
-$(HELPER_NAME)_PRIVATE_FRAMEWORKS = SpringBoardServices BackBoardServices MobileContainerManager FrontBoardServices RunningBoardServices
+# tvOS SDK 无私有框架桩；私有类/符号一律运行时 dlopen + NSClassFromString/dlsym
 
 ifdef TROLLSTORE_LITE
 $(HELPER_NAME)_CFLAGS += -DTROLLSTORE_LITE -DDISABLE_SIGNING=1

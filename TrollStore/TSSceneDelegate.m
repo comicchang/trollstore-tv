@@ -131,6 +131,8 @@
 - (void)handleLdidCheck
 {
 #ifndef TROLLSTORE_LITE
+#if !TARGET_OS_TV
+	// TV builds sign with the built-in ChOma implementation; no ldid is shipped or needed.
 	//if (@available(iOS 16, *)) {} else {
 		NSString* tsAppPath = [NSBundle mainBundle].bundlePath;
 
@@ -142,6 +144,7 @@
 			[TSInstallationController installLdid];
 		}
 	//}
+#endif
 #endif
 }
 

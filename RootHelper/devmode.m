@@ -1,5 +1,67 @@
 @import Foundation;
 
+#if TARGET_OS_TV
+// tvOS SDK 将 libxpc 与 CF-XPC 桥接函数标记为不可用，但运行时均存在；用 dlsym 取实现。
+#include <xpc/xpc.h>
+#include <dlfcn.h>
+
+typedef void (^ts_xpc_handler_t)(xpc_object_t);
+
+typedef xpc_object_t (*ts_xpc_create_fn)(const char*, dispatch_queue_t, uint64_t);
+typedef void (*ts_xpc_set_handler_fn)(xpc_object_t, ts_xpc_handler_t);
+typedef void (*ts_xpc_resume_fn)(xpc_object_t);
+typedef void (*ts_xpc_send_async_fn)(xpc_object_t, xpc_object_t, dispatch_queue_t, ts_xpc_handler_t);
+typedef xpc_object_t (*ts_xpc_send_sync_fn)(xpc_object_t, xpc_object_t);
+typedef xpc_object_t (*ts_xpc_dict_get_fn)(xpc_object_t, const char*);
+typedef CFTypeRef (*ts_cfxpc_to_cf_fn)(xpc_object_t);
+typedef xpc_object_t (*ts_cfxpc_from_cf_fn)(CFTypeRef);
+typedef xpc_object_t (*ts_cfxpc_msg_from_cf_fn)(CFTypeRef);
+typedef CFTypeRef (*ts_cfxpc_to_cf_msg_fn)(xpc_object_t);
+
+static ts_xpc_create_fn ts_xpc_connection_create_mach_service;
+static ts_xpc_set_handler_fn ts_xpc_connection_set_event_handler;
+static ts_xpc_resume_fn ts_xpc_connection_resume;
+static ts_xpc_send_async_fn ts_xpc_connection_send_message_with_reply;
+static ts_xpc_send_sync_fn ts_xpc_connection_send_message_with_reply_sync;
+static ts_xpc_dict_get_fn ts_xpc_dictionary_get_value;
+static ts_cfxpc_to_cf_fn ts_CFXPCCreateCFObjectFromXPCObject;
+static ts_cfxpc_from_cf_fn ts_CFXPCCreateXPCObjectFromCFObject;
+static ts_cfxpc_msg_from_cf_fn ts_CFXPCCreateXPCMessageWithCFObject;
+static ts_cfxpc_to_cf_msg_fn ts_CFXPCCreateCFObjectFromXPCMessage;
+
+static void ts_xpc_symbols_init(void)
+{
+	static dispatch_once_t once;
+	dispatch_once(&once, ^
+	{
+		void* sys = dlopen("/usr/lib/libSystem.B.dylib", RTLD_LAZY | RTLD_GLOBAL);
+		void* cf = dlopen("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", RTLD_LAZY | RTLD_GLOBAL);
+		ts_xpc_connection_create_mach_service = (ts_xpc_create_fn)dlsym(sys, "xpc_connection_create_mach_service");
+		ts_xpc_connection_set_event_handler = (ts_xpc_set_handler_fn)dlsym(sys, "xpc_connection_set_event_handler");
+		ts_xpc_connection_resume = (ts_xpc_resume_fn)dlsym(sys, "xpc_connection_resume");
+		ts_xpc_connection_send_message_with_reply = (ts_xpc_send_async_fn)dlsym(sys, "xpc_connection_send_message_with_reply");
+		ts_xpc_connection_send_message_with_reply_sync = (ts_xpc_send_sync_fn)dlsym(sys, "xpc_connection_send_message_with_reply_sync");
+		ts_xpc_dictionary_get_value = (ts_xpc_dict_get_fn)dlsym(sys, "xpc_dictionary_get_value");
+		ts_CFXPCCreateCFObjectFromXPCObject = (ts_cfxpc_to_cf_fn)dlsym(cf, "_CFXPCCreateCFObjectFromXPCObject");
+		ts_CFXPCCreateXPCObjectFromCFObject = (ts_cfxpc_from_cf_fn)dlsym(cf, "_CFXPCCreateXPCObjectFromCFObject");
+		ts_CFXPCCreateXPCMessageWithCFObject = (ts_cfxpc_msg_from_cf_fn)dlsym(cf, "_CFXPCCreateXPCMessageWithCFObject");
+		ts_CFXPCCreateCFObjectFromXPCMessage = (ts_cfxpc_to_cf_msg_fn)dlsym(cf, "_CFXPCCreateCFObjectFromXPCMessage");
+	});
+}
+
+#define xpc_connection_create_mach_service ts_xpc_connection_create_mach_service
+#define xpc_connection_set_event_handler ts_xpc_connection_set_event_handler
+#define xpc_connection_resume ts_xpc_connection_resume
+#define xpc_connection_send_message_with_reply ts_xpc_connection_send_message_with_reply
+#define xpc_connection_send_message_with_reply_sync ts_xpc_connection_send_message_with_reply_sync
+#define xpc_dictionary_get_value ts_xpc_dictionary_get_value
+#define _CFXPCCreateCFObjectFromXPCObject ts_CFXPCCreateCFObjectFromXPCObject
+#define _CFXPCCreateXPCObjectFromCFObject ts_CFXPCCreateXPCObjectFromCFObject
+#define _CFXPCCreateXPCMessageWithCFObject ts_CFXPCCreateXPCMessageWithCFObject
+#define _CFXPCCreateCFObjectFromXPCMessage ts_CFXPCCreateCFObjectFromXPCMessage
+
+#else
+
 #ifndef __XPC_H__
 // Types
 typedef NSObject* xpc_object_t;
@@ -21,6 +83,7 @@ extern xpc_object_t _CFXPCCreateXPCObjectFromCFObject(CFTypeRef attrs);
 extern xpc_object_t _CFXPCCreateXPCMessageWithCFObject(CFTypeRef obj);
 extern CFTypeRef _CFXPCCreateCFObjectFromXPCMessage(xpc_object_t obj);
 
+#endif // TARGET_OS_TV
 
 typedef enum {
     kAMFIActionArm = 0,     // Trigger a prompt asking the user to enable developer mode on the next reboot
@@ -30,6 +93,9 @@ typedef enum {
 } AMFIXPCAction;
 
 xpc_connection_t startConnection(void) {
+#if TARGET_OS_TV
+	ts_xpc_symbols_init();
+#endif
 	xpc_connection_t connection = xpc_connection_create_mach_service("com.apple.amfi.xpc", NULL, 0);
     if (!connection) {
         NSLog(@"[startXPCConnection] Failed to create XPC connection to amfid");

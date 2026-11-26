@@ -84,12 +84,22 @@ extern NSUserDefaults* trollStoreUserDefaults(void);
 						UIAlertAction* closeAction = [UIAlertAction actionWithTitle:@"Close" style:UIAlertActionStyleDefault handler:nil];
 						[errorAlert addAction:closeAction];
 
+#if TARGET_OS_TV
+						// tvOS 无 UIPasteboard：把日志写入 Documents 供后续取出
+						UIAlertAction* saveLogAction = [UIAlertAction actionWithTitle:@"Save Debug Log" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action)
+						{
+							NSString* logPath = [NSHomeDirectory() stringByAppendingPathComponent:@"Documents/trollstore-install.log"];
+							[log writeToFile:logPath atomically:YES encoding:NSUTF8StringEncoding error:nil];
+						}];
+						[errorAlert addAction:saveLogAction];
+#else
 						UIAlertAction* copyLogAction = [UIAlertAction actionWithTitle:@"Copy Debug Log" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action)
 						{
 							UIPasteboard* pasteboard = [UIPasteboard generalPasteboard];
 							pasteboard.string = log;
 						}];
 						[errorAlert addAction:copyLogAction];
+#endif
 
 						[TSPresentationDelegate presentViewController:errorAlert animated:YES completion:nil];
 

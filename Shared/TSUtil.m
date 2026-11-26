@@ -2,6 +2,7 @@
 
 #import <Foundation/Foundation.h>
 #import <spawn.h>
+#import "TSSpawnCompat.h"
 #import <sys/sysctl.h>
 #import <mach-o/dyld.h>
 #import <libroot.h>
@@ -11,13 +12,21 @@ static EXPLOIT_TYPE gPlatformVulnerabilities;
 void* _CTServerConnectionCreate(CFAllocatorRef, void *, void *);
 int64_t _CTServerConnectionSetCellularUsagePolicy(CFTypeRef* ct, NSString* identifier, NSDictionary* policies);
 
+#ifndef POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE
 #define POSIX_SPAWN_PERSONA_FLAGS_OVERRIDE 1
+#endif
+#if !TARGET_OS_TV
 extern int posix_spawnattr_set_persona_np(const posix_spawnattr_t* __restrict, uid_t, uint32_t);
 extern int posix_spawnattr_set_persona_uid_np(const posix_spawnattr_t* __restrict, uid_t);
 extern int posix_spawnattr_set_persona_gid_np(const posix_spawnattr_t* __restrict, uid_t);
+#endif
 
 void chineseWifiFixup(void)
 {
+#if TARGET_OS_TV
+	// tvOS 无蜂窝网络，无需该修复
+	return;
+#else
 	_CTServerConnectionSetCellularUsagePolicy(
 		_CTServerConnectionCreate(kCFAllocatorDefault, NULL, NULL),
 		NSBundle.mainBundle.bundleIdentifier,
@@ -26,6 +35,7 @@ void chineseWifiFixup(void)
 			@"kCTWiFiDataUsagePolicy" : @"kCTCellularDataUsagePolicyAlwaysAllow"
 		}
 	);
+#endif
 }
 
 NSString *getExecutablePath(void)
@@ -294,6 +304,31 @@ void killall(NSString* processName, BOOL softly)
 	});
 }
 
+
+#if TARGET_OS_TV
+void ts_loadTVPrivateFrameworks(void)
+{
+	static dispatch_once_t once;
+	dispatch_once(&once, ^
+	{
+		const char* fws[] = {
+			"MobileContainerManager",
+			"SpringBoardServices",
+			"FrontBoardServices",
+			"RunningBoardServices",
+			"BackBoardServices",
+			"MobileIcons"
+		};
+		for (size_t i = 0; i < sizeof(fws) / sizeof(fws[0]); i++) {
+			char path[512];
+			snprintf(path, sizeof(path), "/System/Library/PrivateFrameworks/%s.framework/%s", fws[i], fws[i]);
+			void* handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
+			if (!handle) NSLog(@"[ts_loadTVPrivateFrameworks] dlopen %s failed: %s", fws[i], dlerror());
+		}
+	});
+}
+#endif
+
 void respring(void)
 {
 	killall(@"PineBoard", YES);
@@ -409,9 +444,18 @@ NSArray *trollStoreInactiveInstalledAppBundlePaths(void)
 NSString* trollStorePath()
 {
 	NSError* mcmError;
+#if TARGET_OS_TV
+	// tvOS SDK 不含 MobileContainerManager 符号，运行时动态取类
+	Class mcmClass = NSClassFromString(@"MCMAppContainer");
+	if(!mcmClass) return nil;
+	id appContainer = [mcmClass containerWithIdentifier:APP_ID createIfNecessary:NO existed:NULL error:&mcmError];
+	if(!appContainer) return nil;
+	return [[appContainer url] path];
+#else
 	MCMAppContainer* appContainer = [MCMAppContainer containerWithIdentifier:APP_ID createIfNecessary:NO existed:NULL error:&mcmError];
 	if(!appContainer) return nil;
 	return appContainer.url.path;
+#endif
 }
 
 NSString* trollStoreAppPath()

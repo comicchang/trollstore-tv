@@ -1,4 +1,5 @@
 @import Foundation;
+#import "TSPrivateRefs.h"
 @import CoreServices;
 #import "CoreServices.h"
 #import <objc/runtime.h>
@@ -18,11 +19,11 @@ NSDictionary *constructGroupsContainersForEntitlements(NSDictionary *entitlement
 	Class mcmClass;
 	if (systemGroups) {
 		entitlementForGroups = @"com.apple.security.system-groups";
-		mcmClass = [MCMSystemDataContainer class];
+		mcmClass = TSClass(@"MCMSystemDataContainer");
 	}
 	else {
 		entitlementForGroups = @"com.apple.security.application-groups";
-		mcmClass = [MCMSharedDataContainer class];
+		mcmClass = TSClass(@"MCMSharedDataContainer");
 	}
 
 	NSArray *groupIDs = entitlements[entitlementForGroups];

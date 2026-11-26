@@ -335,6 +335,11 @@ extern UIImage* imageWithSize(UIImage* image, CGSize size);
 
 - (NSError*)loadPreviewIcon
 {
+#if TARGET_OS_TV
+	// tvOS SDK 无 MobileIcons 符号；目录列表直接用原始图标
+	_cachedPreviewIcon = [self iconForSize:CGSizeMake(29,29)];
+	return nil;
+#else
 	int imageVariant;
 	CGFloat screenScale = UIScreen.mainScreen.scale;
 
@@ -353,6 +358,7 @@ extern UIImage* imageWithSize(UIImage* image, CGSize size);
 
 	CGImageRef liIcon = LICreateIconForImage([[self iconForSize:CGSizeMake(29,29)] CGImage], imageVariant, 0);
 	_cachedPreviewIcon = [[UIImage alloc] initWithCGImage:liIcon scale:screenScale orientation:0];;
+#endif
 	return nil;
 }
 

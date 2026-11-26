@@ -1,9 +1,13 @@
 #import "TSAppDelegate.h"
+#import <TSUtil.h>
 #import "TSRootViewController.h"
 
 @implementation TSAppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+#if TARGET_OS_TV
+	ts_loadTVPrivateFrameworks();
+#endif
 	return YES;
 }
 

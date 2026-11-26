@@ -101,3 +101,8 @@ extern NSDictionary* dumpEntitlementsFromBinaryData(NSData* binaryData);
 
 extern EXPLOIT_TYPE getDeclaredExploitTypeFromInfoDictionary(NSDictionary *infoDict);
 extern bool isPlatformVulnerableToExploitType(EXPLOIT_TYPE exploitType);
+
+#if TARGET_OS_TV
+// tvOS SDK 不提供私有框架桩；运行时 dlopen 后再使用相关类/符号
+extern void ts_loadTVPrivateFrameworks(void);
+#endif

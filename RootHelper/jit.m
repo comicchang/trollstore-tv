@@ -1,4 +1,5 @@
 @import Foundation;
+#import "TSPrivateRefs.h"
 @import Darwin;
 
 @interface RBSProcessPredicate
@@ -18,9 +19,9 @@ int enableJIT(NSString *bundleID) {
 #ifdef EMBEDDED_ROOT_HELPER
  	return -1;
 #else
- 	RBSProcessPredicate *predicate = [RBSProcessPredicate predicateMatchingBundleIdentifier:bundleID];
-	RBSProcessHandle* process = [RBSProcessHandle handleForPredicate:predicate error:nil];
-	int pid = process.rbs_pid;
+ 	id predicate = [TSClass(@"RBSProcessPredicate") predicateMatchingBundleIdentifier:bundleID];
+	id process = [TSClass(@"RBSProcessHandle") handleForPredicate:predicate error:nil];
+	int pid = [process rbs_pid];
 
 	if (!pid)
 	{

@@ -207,6 +207,7 @@ UIImage* imageWithSize(UIImage* image, CGSize size)
     self.navigationItem.rightBarButtonItem = installFromURLBarButtonItem;
 }
 
+#if !TARGET_OS_TV
 - (void)_setUpSearchBar
 {
 	_searchController = [[UISearchController alloc] initWithSearchResultsController:nil];
@@ -229,6 +230,12 @@ UIImage* imageWithSize(UIImage* image, CGSize size)
 	NSString* pathToIPA = urls.firstObject.path;
 	[TSInstallationController presentInstallationAlertIfEnabledForFile:pathToIPA isRemoteInstall:NO completion:nil];
 }
+#else
+- (void)_setUpSearchBar
+{
+	// tvOS 不支持 UISearchController；列表规模有限，暂不提供搜索
+}
+#endif
 
 - (void)openAppPressedForRowAtIndexPath:(NSIndexPath*)indexPath enableJIT:(BOOL)enableJIT
 {
@@ -453,7 +460,9 @@ UIImage* imageWithSize(UIImage* image, CGSize size)
 	}
 
 	cell.preservesSuperviewLayoutMargins = NO;
+#if !TARGET_OS_TV
 	cell.separatorInset = UIEdgeInsetsZero;
+#endif
 	cell.layoutMargins = UIEdgeInsetsZero;
 
 	return cell;
