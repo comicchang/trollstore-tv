@@ -15,14 +15,32 @@ This repository is a tvOS 17.0 port and continuation of TrollStore for Apple TV 
   - License: MIT (see `LICENSE`)
 
 - **ChOma**
+  - Upstream: https://github.com/opa334/ChOma
+  - Copyright: Copyright (c) 2023 Lars Fröder and contributors (`@alfiecg_dev`, `@LinusHenze`, Google TAG research)
   - Embedded Mach-O / CoreTrust manipulation library under `ChOma/`
-  - License: MIT (see upstream headers and `ChOma/LICENSE` if present)
+  - License: MIT (see `ChOma/LICENSE`)
 
 - **uicache (`RootHelper/uicache.m`)**
+  - Upstream: https://github.com/ProcursusTeam/uikittools-ng
   - Copyright: Copyright (c) 2019 CoolStar; Modified work Copyright (c) 2020-2022 Procursus Team; Modified work Copyright (c) 2022-2024 Lars Fröder
   - License: BSD-4-Clause (see `LICENSE`)
+
+- **libarchive**
+  - Upstream: https://github.com/libarchive/libarchive
+  - License: BSD-2-Clause
+  - Role: archive extraction linked by `RootHelper/unarchive.m` (installed via Homebrew / build environment).
 
 - **OpenSSL (`libcrypto`)**
   - Source: https://github.com/openssl/openssl
   - License: Apache-2.0
   - Note: tvOS static `libcrypto.a` and headers are NOT committed to this repository; users build them locally via `scripts/build-libcrypto-tvos.sh` into gitignored `ChOma/external/tvos*`.
+
+- **Theos**
+  - Source: https://github.com/theos/theos
+  - License: GPL-3.0
+  - Role: external host-side build toolchain only; not bundled or distributed in this repository.
+
+- **Relaxin**
+  - Source: https://github.com/owngoal-dev/Relaxin
+  - License: MIT
+  - Role: external tvOS 17 RootHide jailbreak environment referenced for initial SSH bootstrap; not bundled in this repository.

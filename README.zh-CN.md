@@ -115,9 +115,21 @@ sudo rm -f /var/tmp/trollstorehelper /var/tmp/TrollStore-tvOS.tar \
 
 ## 致谢与开源协议
 
-- [Lars Fröder (`opa334`)](https://github.com/opa334/TrollStore) — 原始 TrollStore
-- [`straight-tamago`](https://github.com/straight-tamago/TrollStore-tvOS) — 早期 tvOS 移植
-- Google TAG、`@alfiecg_dev`、`@LinusHenze` 及 ChOma 贡献者 — CoreTrust 研究与工具库
-- CoolStar、Procursus Team、`opa334` — `uicache`
+本移植项目建立在以下上游与第三方开源项目之上：
+
+| 项目 | 作者 / 维护者 | 许可证 | 作用 |
+| --- | --- | --- | --- |
+| [`opa334/TrollStore`](https://github.com/opa334/TrollStore) | Lars Fröder (`opa334`) | MIT | 原始 TrollStore 代码库与核心架构 |
+| [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) | `straight-tamago` | MIT | 早期 tvOS 移植基线（基于提交 `f1ebe52`） |
+| [`opa334/ChOma`](https://github.com/opa334/ChOma) | Lars Fröder、`@alfiecg_dev`、`@LinusHenze`、Google TAG 及贡献者 | MIT | 内嵌 Mach-O 与 CoreTrust 签名库（`ChOma/`） |
+| [`ProcursusTeam/uikittools-ng`](https://github.com/ProcursusTeam/uikittools-ng) | CoolStar、Procursus Team、`opa334` | BSD-4-Clause | `uicache` 应用注册实现（`RootHelper/uicache.m`） |
+| [`libarchive/libarchive`](https://github.com/libarchive/libarchive) | libarchive 贡献者 | BSD-2-Clause | `RootHelper/unarchive.m` 压缩包解压支持 |
+| [`openssl/openssl`](https://github.com/openssl/openssl) | OpenSSL Project | Apache-2.0 | ChOma 签名所需静态 `libcrypto`（由 `scripts/build-libcrypto-tvos.sh` 本地交叉编译，不入库） |
+| [`theos/theos`](https://github.com/theos/theos) | Theos Team | GPL-3.0 | 构建工具链（仅宿主机编译期使用，不随产物分发） |
+| [`owngoal-dev/Relaxin`](https://github.com/owngoal-dev/Relaxin) | owngoal-dev 及贡献者 | MIT | 首次 SSH 引导所用的外部 tvOS 17 RootHide 越狱环境 |
+
+关联仓库：
+- [`comicchang/trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)（MIT）— 配套宿主机工具箱（CoreTrust 批量签名、BYOIPA 打包、图标反色、干净室探针与冷重启验收）。
+- [`comicchang/trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv)（MIT）— 面向已越狱 tvOS 17.x 的纯洁净室信任缓存安装器（不依赖 CoreTrust 漏洞，带电视界面、`:8787` 网页商店与本地离线油猴托管）。
 
 遵循 [`LICENSE`](LICENSE)（MIT，其中 `RootHelper/uicache.m` 为 BSD-4-Clause）；详见 [`NOTICE`](NOTICE)、[`CHANGELOG.md`](CHANGELOG.md)、[`CONTRIBUTING.md`](CONTRIBUTING.md) 与 [`SECURITY.md`](SECURITY.md)。

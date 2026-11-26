@@ -118,9 +118,21 @@ Once installed, `TrollStore.app` and apps installed through it remain launchable
 
 ## Credits & License
 
-- [Lars Fröder (`opa334`)](https://github.com/opa334/TrollStore) — original TrollStore
-- [`straight-tamago`](https://github.com/straight-tamago/TrollStore-tvOS) — initial tvOS port
-- Google TAG, `@alfiecg_dev`, `@LinusHenze`, and ChOma contributors — CoreTrust research & tooling
-- CoolStar, Procursus Team, and `opa334` — `uicache`
+This port stands on the work of the following upstream and open-source projects:
+
+| Project | Author / Maintainer | License | Role |
+| --- | --- | --- | --- |
+| [`opa334/TrollStore`](https://github.com/opa334/TrollStore) | Lars Fröder (`opa334`) | MIT | Original TrollStore codebase & architecture |
+| [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) | `straight-tamago` | MIT | Initial tvOS port (base commit `f1ebe52`) |
+| [`opa334/ChOma`](https://github.com/opa334/ChOma) | Lars Fröder, `@alfiecg_dev`, `@LinusHenze`, Google TAG & contributors | MIT | Embedded Mach-O & CoreTrust signing library (`ChOma/`) |
+| [`ProcursusTeam/uikittools-ng`](https://github.com/ProcursusTeam/uikittools-ng) | CoolStar, Procursus Team, `opa334` | BSD-4-Clause | `uicache` registration (`RootHelper/uicache.m`) |
+| [`libarchive/libarchive`](https://github.com/libarchive/libarchive) | libarchive contributors | BSD-2-Clause | Archive extraction in `RootHelper/unarchive.m` |
+| [`openssl/openssl`](https://github.com/openssl/openssl) | OpenSSL Project | Apache-2.0 | Static `libcrypto` for CMS/CoreTrust signing (built locally via `scripts/build-libcrypto-tvos.sh`, not committed) |
+| [`theos/theos`](https://github.com/theos/theos) | Theos Team | GPL-3.0 | Build toolchain (host build-time only, not shipped) |
+| [`owngoal-dev/Relaxin`](https://github.com/owngoal-dev/Relaxin) | owngoal-dev & contributors | MIT | External tvOS 17 RootHide jailbreak environment used for initial SSH bootstrap |
+
+Related repositories:
+- [`comicchang/trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools) (MIT) — companion host-side signing, BYOIPA packaging, icon inversion, clean-room probe, and reboot verification toolkit.
+- [`comicchang/trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv) (MIT) — clean-room jailbreak trustcache installer for jailbroken tvOS 17.x (no CoreTrust exploit required; includes TV UI, `:8787` web store, and local offline userscript host).
 
 Licensed under [`LICENSE`](LICENSE) (MIT + BSD-4-Clause for `RootHelper/uicache.m`). See [`NOTICE`](NOTICE), [`CHANGELOG.md`](CHANGELOG.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`SECURITY.md`](SECURITY.md).
