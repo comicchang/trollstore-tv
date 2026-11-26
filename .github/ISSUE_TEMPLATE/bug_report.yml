@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a build, signing, or runtime issue on Apple TV / tvOS
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue with **TrollStore TV**. Please search existing issues first and avoid sharing personal credentials, UDIDs, or private keys.
+
+  - type: input
+    id: apple-tv-model
+    attributes:
+      label: Apple TV Model
+      placeholder: "e.g. Apple TV 4K 3rd Gen (AppleTV14,1)"
+    validations:
+      required: true
+
+  - type: input
+    id: tvos-version
+    attributes:
+      label: tvOS Version & Build
+      placeholder: "e.g. tvOS 17.0 (21J354)"
+    validations:
+      required: true
+
+  - type: input
+    id: host-env
+    attributes:
+      label: Host Build Environment (if building from source)
+      placeholder: "e.g. macOS 15, Xcode 16, Theos, AppleTVOS SDK"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What Happened?
+      description: Describe the issue clearly, including exact error output or CrashReporter `.ips` summary.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true

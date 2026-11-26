@@ -1,0 +1,19 @@
+name: Feature Request
+description: Suggest an improvement for TrollStore TV
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the feature or tvOS UX improvement you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation / Use Case
+      description: Explain how this helps Apple TV users or developers.
+    validations:
+      required: true

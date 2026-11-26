@@ -39,6 +39,6 @@ This document records the engineering solutions required to build and run non-Li
 
 - **Cold-reboot survival (unjailbroken state)**: Both `TrollStore.app` (`com.opa334.TrollStore`) and CoreTrust-signed user apps open directly after a full cold reboot without jailbreak trustcache entries.
 - **Multi-binary installs via `trollstorehelper`**:
-  - `RelaxinTest.app` (5 Mach-Os, standard sandbox + `container-required`) — installed & running, `0` crashes.
-  - `YouTubeTVL.app` (2 Mach-Os, standard sandbox + `container-required`) — installed & running (`RSS ~119 MB`), `0` crashes.
+  - 5-Mach-O app bundle (main executable + embedded framework + 3 dylibs, standard sandbox + `container-required`) — installed & running, `0` crashes.
+  - Decrypted media client (2 Mach-Os, standard sandbox + `container-required` + `allow-alternate-video-decoder-selection`) — installed & running (`RSS ~119 MB`), `0` crashes.
   - `Kodi.app` v21.3 (**108 Mach-Os**: main + `kodi-topshelf.appex` + 106 dylibs, native `no-container` preserved) — installed & running with Python 3.11.7, FFmpeg H.264/HEVC, and migrated `/private/var/mobile/Library/Caches/Kodi` data (`88 MB`, `2,748` files), `0` crashes.

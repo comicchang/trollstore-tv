@@ -1,87 +1,126 @@
-# TrollStore TV (tvOS 17.0 Non-Lite Port)
+# TrollStore TV
 
-[简体中文](README.zh-CN.md)
+[![CI](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml/badge.svg)](https://github.com/comicchang/trollstore-tv/actions/workflows/ci.yml)
+![Platform](https://img.shields.io/badge/platform-tvOS%2017.0%20(21J354)-blue)
+![License](https://img.shields.io/badge/license-MIT%20%2F%20BSD--4--Clause-green)
 
-A maintained, buildable **non-Lite TrollStore** port for **Apple TV 4K (`AppleTV14,1`) running tvOS 17.0 (`21J354`)**, built on top of [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) (`f1ebe52`) and [`opa334/TrollStore`](https://github.com/opa334/TrollStore).
+**English** | [简体中文](README.zh-CN.md)
 
-TrollStore uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed apps that **survive cold reboots and launch directly in the unjailbroken state** without relying on jailbreak trustcaches.
+A buildable, cold-reboot-verified **TrollStore** port for **Apple TV 4K (`AppleTV14,1`, tvOS 17.0 / `21J354`)**, based on [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) (`f1ebe52`) and [`opa334/TrollStore`](https://github.com/opa334/TrollStore).
+
+TrollStore TV uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed tvOS IPAs that **survive cold reboots and launch directly in the unjailbroken state** — without relying on jailbreak trustcaches or external `ldid`.
+
+> Looking for host-side batch CoreTrust signing scripts, clean-room tvOS probe sources, and post-reboot verification tooling? See the companion repository **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)**.
+
+---
 
 ## Verification Status (Apple TV 4K / tvOS 17.0 `21J354`)
 
 | Capability | Status | Notes |
 | --- | --- | --- |
-| Modern Xcode tvOS SDK build (`TrollStore.app` + `trollstorehelper`) | **Verified** | `arm64`, `LC_BUILD_VERSION platform=tvOS`, zero `dynamic_lookup` symbols |
-| On-device CoreTrust signing without `ldid` (built-in ChOma ad-hoc + CoreTrust) | **Verified** | Eliminates tvOS jailbreak `ldid` crashes; preserves nested `.appex` entitlements |
-| Non-root app (`uid=501`) → `trollstorehelper` (`uid=0`) elevation via `persona` | **Verified** | `dlsym` shims in [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h) |
-| **Cold-reboot unjailbroken survival** (`TrollStore.app` & installed apps launch directly) | **Verified (PASS)** | Tested after full cold reboot on sealed read-only SSV tvOS 17.0 |
-| Multi-binary & real-world app installation via `trollstorehelper` | **Verified** | Verified on `RelaxinTest` (5 Mach-Os), `YouTubeTVL` (2 Mach-Os), and `Kodi` v21.3 (**108 Mach-Os**: main + `.appex` + 106 addon/framework dylibs) with 0 trustcache entries |
-| Persistence Helper in `/Applications` system app | **Upstream limitation** | Not installed by default; `/Applications` remains unmodified |
-| Interactive remote-control URL/UI install flow | **Partially verified** | Native tvOS `TSTVSettingsController` and core install chain verified; full UI polish ongoing |
+| Modern Xcode tvOS SDK build (`TrollStore.app` + `trollstorehelper`) | **Verified** | `arm64`, `LC_BUILD_VERSION platform=tvOS`, `0` `dynamic_lookup` symbols |
+| On-device CoreTrust signing without `ldid` (built-in ChOma) | **Verified** | Preserves nested `.appex` entitlements; avoids tvOS `ldid` crashes |
+| Non-root app (`uid=501`) → `trollstorehelper` (`uid=0`) via `persona` | **Verified** | Runtime `dlsym` wrappers in [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h) |
+| **Cold-reboot unjailbroken survival** | **Verified** | `TrollStore.app` & installed apps launch directly after cold reboot on sealed read-only SSV |
+| Real-world multi-binary IPA installation | **Verified** | Verified on 5-Mach-O app (framework + dylibs), decrypted media client (2 Mach-Os), and Kodi 21.3 (**108 Mach-Os**: main + `.appex` + 106 dylibs) with `0` trustcache writes |
+| Persistence Helper in `/Applications` system app | **Upstream limitation** | `/Applications` on SSV is never modified by default |
+| Interactive on-TV URL/UI install UX | **In progress** | Native tvOS `TSTVSettingsController` and core install pipeline verified; Siri Remote UI polish ongoing |
+
+---
 
 ## Key Changes from Upstream (`f1ebe52`)
 
 - **Modern tvOS SDK & Zero `dynamic_lookup`**:
-  - [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h): `dlsym` wrappers for `posix_spawn` and `posix_spawnattr_set_persona_*_np` (marked unavailable in tvOS SDK headers, exported by tvOS `libSystem.B.dylib`).
-  - [`RootHelper/TSPrivateRefs.h`](RootHelper/TSPrivateRefs.h) / [`RootHelper/TSPrivateRefs.m`](RootHelper/TSPrivateRefs.m) + `ts_loadTVPrivateFrameworks()`: runtime `dlopen` + `NSClassFromString` / `dlsym` for `MobileContainerManager`, `FrontBoardServices`, `RunningBoardServices`, `BackBoardServices`, and `SpringBoardServices` — **zero undefined `dynamic_lookup` symbols**.
-  - [`RootHelper/devmode.m`](RootHelper/devmode.m): `dlsym` shims for `libxpc` and `_CFXPC*` bridges on tvOS.
-- **Built-in ChOma Signing (No `ldid` Required on tvOS)**:
-  - [`RootHelper/main.m`](RootHelper/main.m): uses ChOma `codesign_sign_adhoc` on tvOS instead of external `ldid` (which depends on jailbreak root-hiding dylibs and crashes inside app containers), normalizing all Mach-Os before applying main & nested `.appex` entitlements.
+  - [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h): `dlsym` shims for `posix_spawn*` and `posix_spawnattr_set_persona_*_np`.
+  - [`RootHelper/TSPrivateRefs.h`](RootHelper/TSPrivateRefs.h) / [`RootHelper/TSPrivateRefs.m`](RootHelper/TSPrivateRefs.m) + `ts_loadTVPrivateFrameworks()`: runtime `dlopen` + `NSClassFromString`/`dlsym` for tvOS dyld-cache private frameworks (`MobileContainerManager`, `FrontBoardServices`, `RunningBoardServices`, `BackBoardServices`, `SpringBoardServices`).
+  - [`RootHelper/devmode.m`](RootHelper/devmode.m): `dlsym` shims for `libxpc` and `_CFXPC*`.
+- **Built-in ChOma Signing (No `ldid` Required)**:
+  - [`RootHelper/main.m`](RootHelper/main.m): uses ChOma `codesign_sign_adhoc` on tvOS, normalizing all regular Mach-O files before applying per-bundle entitlements (preserving nested `.appex` entitlements).
   - [`TrollStore/TSSceneDelegate.m`](TrollStore/TSSceneDelegate.m): skips automatic `ldid` download on tvOS.
-- **Native tvOS Settings UI**:
-  - [`TrollStore/TSTVSettingsController.h`](TrollStore/TSTVSettingsController.h) / [`TrollStore/TSTVSettingsController.m`](TrollStore/TSTVSettingsController.m): replaces iOS-only `Preferences`/`PSListController` with a native `UITableViewController` settings screen (`Rebuild Icon Cache`, `Refresh App Registrations`, `Respring`, `Uninstall TrollStore`, and read-only signing backend status).
-  - Guards iOS-only APIs (`UIPasteboard`, `UISearchController`, `UIDocumentPickerDelegate`, `CoreTelephony`, `MobileIcons`).
-- **Host Signer & Reproducible tvOS OpenSSL Build**:
-  - [`Exploits/fastPathSign/src/main.m`](Exploits/fastPathSign/src/main.m): supports thin arm64 Mach-O signing without requiring a FAT wrapper.
-  - [`scripts/build-libcrypto-tvos.sh`](scripts/build-libcrypto-tvos.sh): builds static tvOS arm64 OpenSSL `libcrypto.a` into `ChOma/external/tvos/` (gitignored).
-  - [`scripts/build-tvos.sh`](scripts/build-tvos.sh): single-command build, verification, and packaging script producing `_build/TrollStore-tvOS.tar` and `_build/TrollStore-tvOS.ipa`.
+- **Native tvOS UI**:
+  - [`TrollStore/TSTVSettingsController.m`](TrollStore/TSTVSettingsController.m): replaces iOS-only `Preferences`/`PSListController` with native `UITableViewController`.
+  - Guards unavailable iOS APIs (`UIPasteboard`, `UISearchController`, `UIDocumentPickerDelegate`, `CoreTelephony`, `MobileIcons`).
+- **Host Signer & Reproducible Build Tooling**:
+  - [`Exploits/fastPathSign/src/main.m`](Exploits/fastPathSign/src/main.m): supports thin arm64 Mach-O signing directly.
+  - [`scripts/build-libcrypto-tvos.sh`](scripts/build-libcrypto-tvos.sh): cross-compiles static tvOS arm64 OpenSSL `libcrypto.a` (gitignored).
+  - [`scripts/build-tvos.sh`](scripts/build-tvos.sh): single-command build, symbol/signature check, and packaging (`_build/TrollStore-tvOS.{tar,ipa}`).
 
-See [`docs/TVOS-PORTING-NOTES.md`](docs/TVOS-PORTING-NOTES.md) for the full technical write-up.
+Deep-dive technical notes: [`docs/TVOS-PORTING-NOTES.md`](docs/TVOS-PORTING-NOTES.md).
+
+---
 
 ## Building from Source (macOS)
 
 ### Prerequisites
 
 - macOS with full **Xcode** (AppleTVOS SDK installed)
-- **[Theos](https://theos.dev/docs/installation)** (`$THEOS` configured, e.g. `~/theos`)
-- **Homebrew** packages: `libarchive` (and `openssl` for host `fastPathSign`), plus optional `shellcheck` for CI checks
+- **[Theos](https://theos.dev/docs/installation)** (`$THEOS`, e.g. `~/theos`)
+- **Homebrew**: `libarchive`, `openssl` (and optional `shellcheck` for tests)
 
 ### Build & Package
 
 ```sh
-# 1. Build static tvOS arm64 libcrypto.a (one-time; gitignored under ChOma/external/tvos/)
+# 1. Cross-compile static tvOS arm64 libcrypto.a (one-time)
 ./scripts/build-libcrypto-tvos.sh
 
-# 2. Build fastPathSign, RootHelper (trollstorehelper), TrollStore.app, and assemble .tar/.ipa
+# 2. Build fastPathSign, trollstorehelper, TrollStore.app, and assemble archives
 ./scripts/build-tvos.sh
 ```
 
-Preview build commands without modifying files:
+Preview commands without modifying files:
 
 ```sh
 ./scripts/build-tvos.sh --dry-run
 ```
 
-Outputs are written to `_build/`:
-- `_build/TrollStore-tvOS.tar` (for `trollstorehelper install-trollstore`)
-- `_build/TrollStore-tvOS.ipa` (standard `Payload/TrollStore.app` archive)
-
-### Run Local Hygiene & Regression Checks
+Run local lint, regression, and hygiene checks:
 
 ```sh
 ./tests/run.sh
 ```
 
-## Notes on Entitlements & Data Containers
+Outputs in `_build/`:
+- `_build/TrollStore-tvOS.tar` — install archive for `trollstorehelper install-trollstore`
+- `_build/TrollStore-tvOS.ipa` — standard `Payload/TrollStore.app` bundle
 
-- **Standard apps** (e.g., decrypted apps or jailbreak launchers needing `IOSurfaceRootUserClient`): keep standard sandboxed entitlements and let `trollstorehelper` inject `com.apple.private.security.container-required=<bundle-id>`. Adding `platform-application` + `no-sandbox` without explicit `com.apple.security.exception.iokit-user-client-class` entries tightens IOKit access on tvOS 17 and can trigger `Failed to create surface`.
-- **Unsandboxed (`no-container`) apps** (such as Kodi): `trollstorehelper` preserves `com.apple.private.security.no-container=true`, so the app reads/writes `/private/var/mobile/Library/Caches/<App>` consistently across both jailbroken and unjailbroken boots.
-- **Pre-bypassed binaries**: Do not pre-apply `fastPathSign` to IPAs before feeding them to `trollstorehelper`; Apple's on-device Security framework rejects re-signing already CoreTrust-bypassed Mach-Os (`errSecCSInternalError / -67048`). Provide plain ad-hoc or unsigned IPAs and let `trollstorehelper` sign them directly.
+---
+
+## First-Time Installation (via Jailbroken tvOS 17.0 SSH)
+
+On an Apple TV 4K running tvOS 17.0 with temporary root SSH access:
+
+```sh
+# 1. Copy trollstorehelper and TrollStore-tvOS.tar to the real rootfs /private/var/tmp
+#    (Note: on RootHide jailbreaks, real /private/var/tmp is reachable via /rootfs/private/var/tmp)
+scp _build/pkg/TrollStore.app/trollstorehelper _build/TrollStore-tvOS.tar mobile@192.0.2.10:/var/tmp/
+
+# 2. On Apple TV (as root): copy into real rootfs and self-install TrollStore.app
+sudo cp /var/tmp/trollstorehelper /var/tmp/TrollStore-tvOS.tar /rootfs/private/var/tmp/
+sudo chmod 755 /rootfs/private/var/tmp/trollstorehelper
+sudo /rootfs/private/var/tmp/trollstorehelper install-trollstore /private/var/tmp/TrollStore-tvOS.tar
+
+# 3. Clean up temporary files
+sudo rm -f /var/tmp/trollstorehelper /var/tmp/TrollStore-tvOS.tar \
+           /rootfs/private/var/tmp/trollstorehelper /rootfs/private/var/tmp/TrollStore-tvOS.tar
+```
+
+Once installed, `TrollStore.app` and apps installed through it remain launchable after a full cold reboot in the unjailbroken state.
+
+---
+
+## Entitlements & Data Container Notes
+
+- **Standard apps**: keep standard sandboxed entitlements and let `trollstorehelper` inject `com.apple.private.security.container-required=<bundle-id>`. Adding `platform-application` + `no-sandbox` without explicit `com.apple.security.exception.iokit-user-client-class` entries tightens IOKit access on tvOS 17 (e.g. `Failed to create surface`).
+- **`no-container` apps** (e.g. Kodi): `trollstorehelper` preserves `com.apple.private.security.no-container=true`, so the app uses `/private/var/mobile/Library/Caches/<App>` consistently across jailbroken and unjailbroken boots.
+- **Input IPAs**: provide unsigned or standard ad-hoc IPAs; do not pre-apply `fastPathSign` before passing an IPA to `trollstorehelper`, as Apple's on-device Security framework rejects re-signing already CoreTrust-bypassed Mach-Os (`errSecCSInternalError / -67048`).
+
+---
 
 ## Credits & License
 
-- Original TrollStore by [Lars Fröder (`opa334`)](https://github.com/opa334/TrollStore) and contributors
-- Initial tvOS port by [`straight-tamago`](https://github.com/straight-tamago/TrollStore-tvOS)
-- CoreTrust bypass research by Google TAG, `@alfiecg_dev`, `@LinusHenze`, and ChOma contributors
-- `uicache` by CoolStar, Procursus Team, and `opa334`
+- [Lars Fröder (`opa334`)](https://github.com/opa334/TrollStore) — original TrollStore
+- [`straight-tamago`](https://github.com/straight-tamago/TrollStore-tvOS) — initial tvOS port
+- Google TAG, `@alfiecg_dev`, `@LinusHenze`, and ChOma contributors — CoreTrust research & tooling
+- CoolStar, Procursus Team, and `opa334` — `uicache`
 
-Licensed under the terms in [`LICENSE`](LICENSE) (MIT + BSD-4-Clause for `RootHelper/uicache.m`). See [`NOTICE`](NOTICE), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`SECURITY.md`](SECURITY.md) for attribution, contribution standards, and security reporting.
+Licensed under [`LICENSE`](LICENSE) (MIT + BSD-4-Clause for `RootHelper/uicache.m`). See [`NOTICE`](NOTICE), [`CHANGELOG.md`](CHANGELOG.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`SECURITY.md`](SECURITY.md).
