@@ -1,0 +1,28 @@
+# NOTICE
+
+This repository is a tvOS 17.0 port and continuation of TrollStore for Apple TV 4K.
+
+## Upstream & Third-Party Components
+
+- **TrollStore**
+  - Upstream: https://github.com/opa334/TrollStore
+  - Copyright: Copyright (c) 2022-2024 Lars Fröder (opa334) and contributors
+  - License: MIT (see `LICENSE`)
+
+- **TrollStore-tvOS**
+  - Upstream: https://github.com/straight-tamago/TrollStore-tvOS (base commit `f1ebe52`)
+  - Copyright: Copyright (c) 2024 straight-tamago
+  - License: MIT (see `LICENSE`)
+
+- **ChOma**
+  - Embedded Mach-O / CoreTrust manipulation library under `ChOma/`
+  - License: MIT (see upstream headers and `ChOma/LICENSE` if present)
+
+- **uicache (`RootHelper/uicache.m`)**
+  - Copyright: Copyright (c) 2019 CoolStar; Modified work Copyright (c) 2020-2022 Procursus Team; Modified work Copyright (c) 2022-2024 Lars Fröder
+  - License: BSD-4-Clause (see `LICENSE`)
+
+- **OpenSSL (`libcrypto`)**
+  - Source: https://github.com/openssl/openssl
+  - License: Apache-2.0
+  - Note: tvOS static `libcrypto.a` and headers are NOT committed to this repository; users build them locally via `scripts/build-libcrypto-tvos.sh` into gitignored `ChOma/external/tvos*`.

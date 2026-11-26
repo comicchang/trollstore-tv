@@ -1,128 +1,87 @@
-# # TrollStore tvOS
+# TrollStore TV (tvOS 17.0 Non-Lite Port)
 
-TrollStore is a permasigned jailed app that can permanently install any IPA you open in it.
+[简体中文](README.zh-CN.md)
 
-It works because of an AMFI/CoreTrust bug where iOS does not correctly verify code signatures of binaries in which there are multiple signers.
+A maintained, buildable **non-Lite TrollStore** port for **Apple TV 4K (`AppleTV14,1`) running tvOS 17.0 (`21J354`)**, built on top of [`straight-tamago/TrollStore-tvOS`](https://github.com/straight-tamago/TrollStore-tvOS) (`f1ebe52`) and [`opa334/TrollStore`](https://github.com/opa334/TrollStore).
 
-Supported versions: 14.0 beta 2 - 16.6.1, 16.7 RC (20H18), 17.0
+TrollStore uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed apps that **survive cold reboots and launch directly in the unjailbroken state** without relying on jailbreak trustcaches.
 
-## Installing TrollStore
+## Verification Status (Apple TV 4K / tvOS 17.0 `21J354`)
 
-For installing TrollStore, refer to the guides at [ios.cfw.guide](https://ios.cfw.guide/installing-trollstore)
+| Capability | Status | Notes |
+| --- | --- | --- |
+| Modern Xcode tvOS SDK build (`TrollStore.app` + `trollstorehelper`) | **Verified** | `arm64`, `LC_BUILD_VERSION platform=tvOS`, zero `dynamic_lookup` symbols |
+| On-device CoreTrust signing without `ldid` (built-in ChOma ad-hoc + CoreTrust) | **Verified** | Eliminates tvOS jailbreak `ldid` crashes; preserves nested `.appex` entitlements |
+| Non-root app (`uid=501`) → `trollstorehelper` (`uid=0`) elevation via `persona` | **Verified** | `dlsym` shims in [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h) |
+| **Cold-reboot unjailbroken survival** (`TrollStore.app` & installed apps launch directly) | **Verified (PASS)** | Tested after full cold reboot on sealed read-only SSV tvOS 17.0 |
+| Multi-binary & real-world app installation via `trollstorehelper` | **Verified** | Verified on `RelaxinTest` (5 Mach-Os), `YouTubeTVL` (2 Mach-Os), and `Kodi` v21.3 (**108 Mach-Os**: main + `.appex` + 106 addon/framework dylibs) with 0 trustcache entries |
+| Persistence Helper in `/Applications` system app | **Upstream limitation** | Not installed by default; `/Applications` remains unmodified |
+| Interactive remote-control URL/UI install flow | **Partially verified** | Native tvOS `TSTVSettingsController` and core install chain verified; full UI polish ongoing |
 
-16.7.x (excluding 16.7 RC) and 17.0.1+ will NEVER be supported (unless a third CoreTrust bug is discovered, which is unlikely).
+## Key Changes from Upstream (`f1ebe52`)
 
-## Updating TrollStore
+- **Modern tvOS SDK & Zero `dynamic_lookup`**:
+  - [`Shared/TSSpawnCompat.h`](Shared/TSSpawnCompat.h): `dlsym` wrappers for `posix_spawn` and `posix_spawnattr_set_persona_*_np` (marked unavailable in tvOS SDK headers, exported by tvOS `libSystem.B.dylib`).
+  - [`RootHelper/TSPrivateRefs.h`](RootHelper/TSPrivateRefs.h) / [`RootHelper/TSPrivateRefs.m`](RootHelper/TSPrivateRefs.m) + `ts_loadTVPrivateFrameworks()`: runtime `dlopen` + `NSClassFromString` / `dlsym` for `MobileContainerManager`, `FrontBoardServices`, `RunningBoardServices`, `BackBoardServices`, and `SpringBoardServices` — **zero undefined `dynamic_lookup` symbols**.
+  - [`RootHelper/devmode.m`](RootHelper/devmode.m): `dlsym` shims for `libxpc` and `_CFXPC*` bridges on tvOS.
+- **Built-in ChOma Signing (No `ldid` Required on tvOS)**:
+  - [`RootHelper/main.m`](RootHelper/main.m): uses ChOma `codesign_sign_adhoc` on tvOS instead of external `ldid` (which depends on jailbreak root-hiding dylibs and crashes inside app containers), normalizing all Mach-Os before applying main & nested `.appex` entitlements.
+  - [`TrollStore/TSSceneDelegate.m`](TrollStore/TSSceneDelegate.m): skips automatic `ldid` download on tvOS.
+- **Native tvOS Settings UI**:
+  - [`TrollStore/TSTVSettingsController.h`](TrollStore/TSTVSettingsController.h) / [`TrollStore/TSTVSettingsController.m`](TrollStore/TSTVSettingsController.m): replaces iOS-only `Preferences`/`PSListController` with a native `UITableViewController` settings screen (`Rebuild Icon Cache`, `Refresh App Registrations`, `Respring`, `Uninstall TrollStore`, and read-only signing backend status).
+  - Guards iOS-only APIs (`UIPasteboard`, `UISearchController`, `UIDocumentPickerDelegate`, `CoreTelephony`, `MobileIcons`).
+- **Host Signer & Reproducible tvOS OpenSSL Build**:
+  - [`Exploits/fastPathSign/src/main.m`](Exploits/fastPathSign/src/main.m): supports thin arm64 Mach-O signing without requiring a FAT wrapper.
+  - [`scripts/build-libcrypto-tvos.sh`](scripts/build-libcrypto-tvos.sh): builds static tvOS arm64 OpenSSL `libcrypto.a` into `ChOma/external/tvos/` (gitignored).
+  - [`scripts/build-tvos.sh`](scripts/build-tvos.sh): single-command build, verification, and packaging script producing `_build/TrollStore-tvOS.tar` and `_build/TrollStore-tvOS.ipa`.
 
-When a new TrollStore update is available, a button to install it will appear at the top in the TrollStore settings. After tapping the button, TrollStore will automatically download the update, install it, and respring.
+See [`docs/TVOS-PORTING-NOTES.md`](docs/TVOS-PORTING-NOTES.md) for the full technical write-up.
 
-Alternatively (if anything goes wrong), you can download the TrollStore.tar file under Releases and open it in TrollStore, TrollStore will install the update and respring.
+## Building from Source (macOS)
 
-## Uninstalling an app
+### Prerequisites
 
-Apps installed from TrollStore can only be uninstalled from TrollStore itself, tap an app or swipe it to the left in the 'Apps' tab to delete it.
+- macOS with full **Xcode** (AppleTVOS SDK installed)
+- **[Theos](https://theos.dev/docs/installation)** (`$THEOS` configured, e.g. `~/theos`)
+- **Homebrew** packages: `libarchive` (and `openssl` for host `fastPathSign`), plus optional `shellcheck` for CI checks
 
-## Persistence Helper
+### Build & Package
 
-The CoreTrust bug used in TrollStore is only enough to install "System" apps, this is because FrontBoard has an additional security check (it calls libmis) every time before a user app is launched. Unfortunately it is not possible to install new "System" apps that stay through an icon cache reload. Therefore, when iOS reloads the icon cache, all TrollStore installed apps including TrollStore itself will revert back to "User" state and will no longer launch.
+```sh
+# 1. Build static tvOS arm64 libcrypto.a (one-time; gitignored under ChOma/external/tvos/)
+./scripts/build-libcrypto-tvos.sh
 
-The only way to work around this is to install a persistence helper into a system app, this helper can then be used to reregister TrollStore and its installed apps as "System" so that they become launchable again, an option for this is available in TrollStore settings.
-
-On jailbroken iOS 14 when TrollHelper is used for installation, it is located in /Applications and will persist as a "System" app through icon cache reloads, therefore TrollHelper is used as the persistence helper on iOS 14.
-
-## URL Scheme
-
-As of version 1.3, TrollStore replaces the system URL scheme "apple-magnifier" (this is done so "jailbreak" detections can't detect TrollStore like they could if TrollStore had a unique URL scheme). This URL scheme can be used to install applications right from the browser, or to enable JIT from the app itself (only 2.0.12 and above), the format goes as follows:
-
-- `apple-magnifier://install?url=<URL_to_IPA>`
-- `apple-magnifier://enable-jit?bundle-id=<Bundle_ID>`
-
-On devices that don't have TrollStore (1.3+) installed, this will just open the magnifier app.
-
-## Features
-
-The binaries inside an IPA can have arbitrary entitlements, fakesign them with ldid and the entitlements you want (`ldid -S<path/to/entitlements.plist> <path/to/binary>`) and TrollStore will preserve the entitlements when resigning them with the fake root certificate on installation. This gives you a lot of possibilities, some of which are explained below.
-
-### Banned entitlements
-
-iOS 15 on A12+ has banned the following three entitlements related to running unsigned code, these are impossible to get without a PPL bypass, apps signed with them will crash on launch.
-
-`com.apple.private.cs.debugger`
-
-`dynamic-codesigning`
-
-`com.apple.private.skip-library-validation`
-
-### Unsandboxing
-
-Your app can run unsandboxed using one of the following entitlements:
-
-```xml
-<key>com.apple.private.security.container-required</key>
-<false/>
+# 2. Build fastPathSign, RootHelper (trollstorehelper), TrollStore.app, and assemble .tar/.ipa
+./scripts/build-tvos.sh
 ```
 
-```xml
-<key>com.apple.private.security.no-container</key>
-<true/>
+Preview build commands without modifying files:
+
+```sh
+./scripts/build-tvos.sh --dry-run
 ```
 
-```xml
-<key>com.apple.private.security.no-sandbox</key>
-<true/>
+Outputs are written to `_build/`:
+- `_build/TrollStore-tvOS.tar` (for `trollstorehelper install-trollstore`)
+- `_build/TrollStore-tvOS.ipa` (standard `Payload/TrollStore.app` archive)
+
+### Run Local Hygiene & Regression Checks
+
+```sh
+./tests/run.sh
 ```
 
-The third one is recommended if you still want a sandbox container for your application.
+## Notes on Entitlements & Data Containers
 
-You might also need the platform-application entitlement in order for these to work properly:
+- **Standard apps** (e.g., decrypted apps or jailbreak launchers needing `IOSurfaceRootUserClient`): keep standard sandboxed entitlements and let `trollstorehelper` inject `com.apple.private.security.container-required=<bundle-id>`. Adding `platform-application` + `no-sandbox` without explicit `com.apple.security.exception.iokit-user-client-class` entries tightens IOKit access on tvOS 17 and can trigger `Failed to create surface`.
+- **Unsandboxed (`no-container`) apps** (such as Kodi): `trollstorehelper` preserves `com.apple.private.security.no-container=true`, so the app reads/writes `/private/var/mobile/Library/Caches/<App>` consistently across both jailbroken and unjailbroken boots.
+- **Pre-bypassed binaries**: Do not pre-apply `fastPathSign` to IPAs before feeding them to `trollstorehelper`; Apple's on-device Security framework rejects re-signing already CoreTrust-bypassed Mach-Os (`errSecCSInternalError / -67048`). Provide plain ad-hoc or unsigned IPAs and let `trollstorehelper` sign them directly.
 
-```xml
-<key>platform-application</key>
-<true/>
-```
+## Credits & License
 
-Please note that the platform-application entitlement causes side effects such as some parts of the sandbox becoming tighter, so you may need additional private entitlements to circumvent that. (For example afterwards you need an exception entitlement for every single IOKit user client class you want to access).
+- Original TrollStore by [Lars Fröder (`opa334`)](https://github.com/opa334/TrollStore) and contributors
+- Initial tvOS port by [`straight-tamago`](https://github.com/straight-tamago/TrollStore-tvOS)
+- CoreTrust bypass research by Google TAG, `@alfiecg_dev`, `@LinusHenze`, and ChOma contributors
+- `uicache` by CoolStar, Procursus Team, and `opa334`
 
-In order for an app with `com.apple.private.security.no-sandbox` and `platform-application` to be able to access it's own data container, you might need the additional entitlement:
-
-```xml
-<key>com.apple.private.security.storage.AppDataContainers</key>
-<true/>
-```
-
-### Root Helpers
-
-When your app is not sandboxed, you can spawn other binaries using posix_spawn, you can also spawn binaries as root with the following entitlement:
-
-```xml
-<key>com.apple.private.persona-mgmt</key>
-<true/>
-```
-
-You can also add your own binaries into your app bundle.
-
-Afterwards you can use the [spawnRoot function in TSUtil.m](./Shared/TSUtil.m#L79) to spawn the binary as root.
-
-### Things that are not possible using TrollStore
-
-- Getting proper platformization (`TF_PLATFORM` / `CS_PLATFORMIZED`)
-- Spawning a launch daemon (Would need `CS_PLATFORMIZED`)
-- Injecting a tweak into a system process (Would need `TF_PLATFORM`, a userland PAC bypass and a PMAP trust level bypass)
-
-### Compilation
-
-To compile TrollStore, ensure [theos](https://theos.dev/docs/installation) is installed. Additionaly ensure [brew](https://brew.sh/) is installed and install [libarchive](https://formulae.brew.sh/formula/libarchive) from brew.
-
-## Credits and Further Reading
-
-[@alfiecg_dev](https://twitter.com/alfiecg_dev/) - Found the CoreTrust bug that allows TrollStore to work through patchdiffing and worked on automating the bypass.
-
-Google Threat Analysis Group - Found the CoreTrust bug as part of an in-the-wild spyware chain and reported it to Apple.
-
-[@LinusHenze](https://twitter.com/LinusHenze) - Found the installd bypass used to install TrollStore on iOS 14-15.6.1 via TrollHelperOTA, as well as the original CoreTrust bug used in TrollStore 1.0.
-
-[@straight-tamago](https://twitter.com/straight_tamago/)
-
-[Fugu15 Presentation](https://youtu.be/rPTifU1lG7Q)
-
-[Write-Up on the first CoreTrust bug with more information](https://worthdoingbadly.com/coretrust/).
+Licensed under the terms in [`LICENSE`](LICENSE) (MIT + BSD-4-Clause for `RootHelper/uicache.m`). See [`NOTICE`](NOTICE), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`SECURITY.md`](SECURITY.md) for attribution, contribution standards, and security reporting.
