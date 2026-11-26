@@ -92,8 +92,8 @@ fi
 
 echo "== 6. Privacy & tracked-artifact hygiene =="
 LEAK_RE='192\.168\.|10\.8\.|10\.222\.|/Users/[A-Za-z0-9._-]+|ooxx|WV4ADEUMV4|\.jbroot-[0-9A-Fa-f]{16}|tsltv@local'
-if git grep -nE "$LEAK_RE" -- ':!tests/run.sh' >/dev/null 2>&1; then
-	git grep -nE "$LEAK_RE" -- ':!tests/run.sh' >&2
+if git grep -InE "$LEAK_RE" -- ':!tests/run.sh' >/dev/null 2>&1; then
+	git grep -InE "$LEAK_RE" -- ':!tests/run.sh' >&2
 	ng "privacy/local-path leak scan"
 else
 	ok "privacy/local-path leak scan (0 hits)"
