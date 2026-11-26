@@ -547,7 +547,9 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 		FAT* fat = fat_init_from_path(path.fileSystemRepresentation);
 		if(fat)
 		{
+			MachO* preferred = fat_find_preferred_slice(fat);
 			fat_free(fat);
+			if(!preferred) continue;
 			int r = codesign_sign_adhoc(path.fileSystemRepresentation, false, nil);
 			if(r != 0) r = codesign_sign_adhoc(path.fileSystemRepresentation, true, nil);
 			if(r != 0)
@@ -763,10 +765,17 @@ int signApp(NSString* appPath)
 	}
 
 #ifndef TROLLSTORE_LITE
-	// Apply CoreTrust bypass
-	enumerator = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:appPath] includingPropertiesForKeys:nil options:0 errorHandler:nil];
+	// Apply CoreTrust bypass (regular non-symlink files only so versioned framework symlinks stay intact)
+	NSArray<NSURLResourceKey>* bypassKeys = @[NSURLIsRegularFileKey, NSURLIsSymbolicLinkKey];
+	enumerator = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:appPath] includingPropertiesForKeys:bypassKeys options:0 errorHandler:nil];
 	while(fileURL = [enumerator nextObject])
 	{
+		NSNumber* isRegularFile = nil;
+		NSNumber* isSymlink = nil;
+		if(![fileURL getResourceValue:&isRegularFile forKey:NSURLIsRegularFileKey error:nil]) continue;
+		if(![fileURL getResourceValue:&isSymlink forKey:NSURLIsSymbolicLinkKey error:nil]) continue;
+		if(!isRegularFile.boolValue || isSymlink.boolValue) continue;
+
 		NSString *filePath = fileURL.path;
 		FAT *fat = fat_init_from_path(filePath.fileSystemRepresentation);
 		if (fat) {
@@ -823,10 +832,17 @@ int signApp(NSString* appPath)
 		return 182;
 	}
 #else // TROLLSTORE_LITE
-	// Just check for whether anything is fairplay encrypted
-	enumerator = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:appPath] includingPropertiesForKeys:nil options:0 errorHandler:nil];
+	// Just check for whether anything is fairplay encrypted (regular non-symlink files only)
+	NSArray<NSURLResourceKey>* encKeys = @[NSURLIsRegularFileKey, NSURLIsSymbolicLinkKey];
+	enumerator = [[NSFileManager defaultManager] enumeratorAtURL:[NSURL fileURLWithPath:appPath] includingPropertiesForKeys:encKeys options:0 errorHandler:nil];
 	while(fileURL = [enumerator nextObject])
 	{
+		NSNumber* isRegularFile = nil;
+		NSNumber* isSymlink = nil;
+		if(![fileURL getResourceValue:&isRegularFile forKey:NSURLIsRegularFileKey error:nil]) continue;
+		if(![fileURL getResourceValue:&isSymlink forKey:NSURLIsSymbolicLinkKey error:nil]) continue;
+		if(!isRegularFile.boolValue || isSymlink.boolValue) continue;
+
 		NSString *filePath = fileURL.path;
 		FAT *fat = fat_init_from_path(filePath.fileSystemRepresentation);
 		if (fat) {
