@@ -191,3 +191,10 @@ sudo "$TSH" install-trollstore /private/var/tmp/TrollStore-tvOS.tar
 - [`comicchang/trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv)（MIT）— 面向已越狱 tvOS 17.x 的纯洁净室信任缓存安装器（不依赖 CoreTrust 漏洞，带电视界面、`:8787` 网页商店与本地离线油猴托管）。
 
 遵循 [`LICENSE`](LICENSE)（MIT，其中 `RootHelper/uicache.m` 为 BSD-4-Clause）；详见 [`NOTICE`](NOTICE)、[`CHANGELOG.md`](CHANGELOG.md)、[`CONTRIBUTING.md`](CONTRIBUTING.md) 与 [`SECURITY.md`](SECURITY.md)。
+
+<!--
+  📺 恭喜你刷到了 README 最底下的隐藏副本：
+  别人买 Apple TV 是为了看奈飞，咱们买 Apple TV 是为了跟它斗智斗勇。
+  好消息是：这次真不用每周给证书续命了，拔电源重启照样坚挺——
+  至于遥控器又滑进沙发缝这事，本仓库暂不提供越狱修复。
+-->

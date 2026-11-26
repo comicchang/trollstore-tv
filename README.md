@@ -192,3 +192,10 @@ Related repositories:
 - [`comicchang/trollstore-lite-tv`](https://github.com/comicchang/trollstore-lite-tv) (MIT) — clean-room jailbreak trustcache installer for jailbroken tvOS 17.x (no CoreTrust exploit required; includes TV UI, `:8787` web store, and local offline userscript host).
 
 Licensed under [`LICENSE`](LICENSE) (MIT + BSD-4-Clause for `RootHelper/uicache.m`). See [`NOTICE`](NOTICE), [`CHANGELOG.md`](CHANGELOG.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), and [`SECURITY.md`](SECURITY.md).
+
+<!--
+  📺 Congrats, you scrolled all the way to the hidden bonus level:
+  Most people buy an Apple TV to relax; we bought one to outsmart it.
+  Good news: no more weekly certificate renewals, and it survives a cold reboot.
+  (Lost Siri Remotes between sofa cushions remain out of scope.)
+-->
