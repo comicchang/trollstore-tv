@@ -10,7 +10,7 @@ A buildable, cold-reboot-verified **TrollStore** port for **Apple TV 4K (`AppleT
 
 TrollStore TV uses the CoreTrust code-signature bypass (`TeamIdentifier=T8ALTGMVXN`) to install permanently signed tvOS IPAs that **survive cold reboots and launch directly in the unjailbroken state** — without relying on jailbreak trustcaches or external `ldid`.
 
-> Looking for host-side batch CoreTrust signing scripts, clean-room tvOS probe sources, and post-reboot verification tooling? See the companion repository **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)**.
+> Looking for companion host-side utilities (`.deb`-to-`.ipa` conversion for open-source apps like Kodi, generic BYOIPA repackaging & tvOS icon inversion, batch CoreTrust signing, clean-room probe sources, and post-reboot verification)? See the companion repository **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** (and its [App Packaging Guide](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)).
 
 ---
 

@@ -10,7 +10,7 @@
 
 借助 CoreTrust 签名链（`TeamIdentifier=T8ALTGMVXN`），通过本工具安装的应用**冷重启后可在未越狱态直接打开**，无需依赖越狱 `trustcache` 或外部 `ldid`。
 
-> 如需宿主机 CoreTrust 批量签名脚本、干净室 tvOS 探针源码与重启验收工具，请见配套仓库 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)**。
+> 如需配套宿主机工具集（开源 `.deb` 转 `.ipa`（如 Kodi）、通用 BYOIPA 自助重打包与 tvOS 图标反色、批量 CoreTrust 签名、干净室探针与重启验收脚本），请见配套仓库 **[`trollstore-tv-tools`](https://github.com/comicchang/trollstore-tv-tools)** 及 [应用打包与安装指南](https://github.com/comicchang/trollstore-tv-tools/blob/main/docs/APP-PACKAGING-GUIDE.md)。
 
 ---
 
