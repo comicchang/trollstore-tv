@@ -1,11 +1,63 @@
+# 1. Local Secrets, Env & Runtime Locks
+.env
+.env.local
+.env.*.local
+*.key
+*.mobileprovision
+*credential*.bin
+*.pid
+*.token
+
+# 2. Language Virtualenv, Bytecode & Test/Lint Caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 3. Native / Platform Build Outputs
 out/
-.DS_Store
+_build/
+build/
 .theos/
 packages/
-xcuserdata
-.vscode
 Pwnify/pwnify
-InstallerVictim.ipa
-_build
+Exploits/fastPathSign/fastPathSign
 ChOma/external/tvos/
 ChOma/external/tvos-include/
+
+# 4. Large Binaries, Packages & Archives
+InstallerVictim.ipa
+*.ipa
+*.tipa
+*.deb
+*.ipsw
+*.dmp
+*.ips
+
+# 5. Narrow Runtime Logs & Private Snapshots
+local/
+/work/
+
+# 6. Temp Files, Backups, OS & Editor Junk
+*.tmp
+*.bak
+*.orig
+*.swp
+*~
+.DS_Store
+Thumbs.db
+xcuserdata
+.idea/
+.vscode/
+
+# 7. Local Agent & Tooling Overlays
+/.drafts/
+.agents/
+.claude/
+.codex/
+.dotai/
+.omp/
+.omo/
+.serena/
+.memsearch/
+.code-review-graph/

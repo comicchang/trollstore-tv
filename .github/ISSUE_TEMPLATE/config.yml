@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Report
+    url: https://github.com/comicchang/trollstore-tv/blob/main/SECURITY.md
+    about: Please report security issues privately per SECURITY.md.
+  - name: Companion Host Toolkit (trollstore-tv-tools)
+    url: https://github.com/comicchang/trollstore-tv-tools
+    about: BYOIPA packaging scripts, icon inversion, batch CoreTrust signer, and reboot verification.
+  - name: Jailbreak Trustcache Alternative (trollstore-lite-tv)
+    url: https://github.com/comicchang/trollstore-lite-tv
+    about: Clean-room MIT installer for jailbroken tvOS 17.x+ without CoreTrust exploits.
